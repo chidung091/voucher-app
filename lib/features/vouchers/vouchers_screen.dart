@@ -51,7 +51,7 @@ class VouchersScreen extends ConsumerWidget {
                   final voucher = vouchers[index];
                   return Card(
                     child: ListTile(
-                      onTap: () => context.go('/vouchers/${voucher.id}'),
+                      onTap: () => context.push('/vouchers/${voucher.id}'),
                       leading: CircleAvatar(
                         backgroundColor: Theme.of(context)
                             .colorScheme

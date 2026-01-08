@@ -135,10 +135,15 @@ class _VoucherDetailBody extends StatelessWidget {
             children: [
               TabBar(
                 labelColor: Theme.of(context).colorScheme.onSurface,
-                tabs: [
-                  const Tab(text: 'Description'),
-                  const Tab(text: 'Redemption Rules'),
-                  const Tab(text: 'After-sales'),
+                tabs: const [
+                  Tab(child: Text('Description')),
+                  Tab(
+                    child: Text(
+                      'Redemption\nRules',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  Tab(child: Text('After-sales')),
                 ],
               ),
               SizedBox(
@@ -151,15 +156,11 @@ class _VoucherDetailBody extends StatelessWidget {
                     ),
                     Padding(
                       padding: const EdgeInsets.all(12),
-                      child: const Text(
-                        'Redeemable once per account. Present the voucher before checkout.',
-                      ),
+                      child: Text(voucher.redemptionRules),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(12),
-                      child: const Text(
-                        'Contact support within 7 days if there is any issue.',
-                      ),
+                      child: Text(voucher.afterSales),
                     ),
                   ],
                 ),
@@ -189,7 +190,7 @@ class _VoucherImageCarouselState extends State<_VoucherImageCarousel> {
   Widget build(BuildContext context) {
     final images = widget.imageAssets;
     return SizedBox(
-      height: 340,
+      height: 400,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.black,

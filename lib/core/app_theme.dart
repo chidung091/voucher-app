@@ -5,9 +5,12 @@ class AppTheme {
 
   static ThemeData get lightTheme {
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: _seedColor),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF111111),
+        surface: Colors.white,
+      ),
       useMaterial3: true,
-      scaffoldBackgroundColor: const Color(0xFFF6F4F0),
+      scaffoldBackgroundColor: Colors.white,
       cardTheme: const CardTheme(
         elevation: 0,
         margin: EdgeInsets.zero,

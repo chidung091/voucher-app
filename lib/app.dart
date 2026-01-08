@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import 'core/app_theme.dart';
-import 'router/app_router.dart';
 import 'state/providers.dart';
 
 class VoucherApp extends ConsumerWidget {
@@ -13,7 +12,7 @@ class VoucherApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
-    final themeMode = ref.watch(themeModeProvider);
+    final themeMode = ThemeMode.light;
 
     return MaterialApp.router(
       title: 'Voucher App',

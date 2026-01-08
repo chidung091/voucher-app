@@ -7,6 +7,8 @@ class Voucher {
     required this.points,
     required this.validUntil,
     required this.description,
+    required this.redemptionRules,
+    required this.afterSales,
     required this.imageAsset,
     required this.imageAssets,
     required this.isRedeemed,
@@ -19,6 +21,8 @@ class Voucher {
   final int points;
   final DateTime validUntil;
   final String description;
+  final String redemptionRules;
+  final String afterSales;
   final String imageAsset;
   final List<String> imageAssets;
   final bool isRedeemed;
@@ -37,6 +41,8 @@ class Voucher {
       validUntil: DateTime.tryParse(json['validUntil'] as String? ?? '') ??
           DateTime.now(),
       description: json['description'] as String? ?? '',
+      redemptionRules: json['redemptionRules'] as String? ?? '',
+      afterSales: json['afterSales'] as String? ?? '',
       imageAsset: json['imageAsset'] as String? ?? 'assets/images/logo.png',
       imageAssets: images,
       isRedeemed: json['completed'] as bool? ?? false,
