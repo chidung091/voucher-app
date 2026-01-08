@@ -30,6 +30,25 @@
   "voucherStatusRedeemed": "Redeemed",
   "voucherActionRedeem": "Redeem",
   "voucherActionView": "View",
+  "voucherNotFound": "Voucher not found",
+  "commodityDetails": "Commodity Details",
+  "validUntilLabel": "Valid until {date}",
+  "@validUntilLabel": {
+    "description": "Voucher expiration date label",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "descriptionTab": "Description",
+  "redemptionRulesTab": "Redemption Rules",
+  "afterSalesTab": "After-sales",
+  "redemptionRulesBody": "Redeemable once per account. Present the voucher before checkout.",
+  "afterSalesBody": "Contact support within 7 days if there is any issue.",
+  "redeemNow": "Redeem Now",
+  "priceLabel": "Price",
+  "pointsLabel": "Points",
   "settingsTitle": "Settings",
   "themeTitle": "Theme",
   "themeLight": "Light",

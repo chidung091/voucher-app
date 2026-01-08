@@ -38,6 +38,7 @@ class AdaptiveScaffold extends StatelessWidget {
         items.indexWhere((item) => location.startsWith(item.route));
     final currentIndex = selectedIndex == -1 ? 0 : selectedIndex;
     final pageTitle = items[currentIndex].title;
+    final isVoucherDetail = location.startsWith('/vouchers/');
 
     final isTablet = ResponsiveBreakpoints.isTablet(context);
     final rail = NavigationRail(
@@ -67,7 +68,9 @@ class AdaptiveScaffold extends StatelessWidget {
           : child,
       bottomNavigationBar: isTablet
           ? null
-          : BottomNavigationBar(
+          : (isVoucherDetail
+              ? null
+              : BottomNavigationBar(
               currentIndex: currentIndex,
               onTap: (index) => context.go(items[index].route),
               items: [
@@ -77,7 +80,7 @@ class AdaptiveScaffold extends StatelessWidget {
                     label: item.label,
                   ),
               ],
-            ),
+            )),
     );
   }
 }

@@ -6,6 +6,7 @@ import '../features/home/home_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/vouchers/vouchers_screen.dart';
+import '../features/vouchers/voucher_detail_screen.dart';
 import '../widgets/adaptive_scaffold.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
@@ -32,6 +33,14 @@ GoRouter buildRouter(Ref ref) {
             path: '/vouchers',
             name: 'vouchers',
             builder: (context, state) => const VouchersScreen(),
+          ),
+          GoRoute(
+            path: '/vouchers/:id',
+            name: 'voucher-detail',
+            builder: (context, state) {
+              final id = int.tryParse(state.pathParameters['id'] ?? '');
+              return VoucherDetailScreen(voucherId: id);
+            },
           ),
           GoRoute(
             path: '/settings',

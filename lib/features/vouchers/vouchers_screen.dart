@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../widgets/error_view.dart';
@@ -50,6 +51,7 @@ class VouchersScreen extends ConsumerWidget {
                   final voucher = vouchers[index];
                   return Card(
                     child: ListTile(
+                      onTap: () => context.go('/vouchers/${voucher.id}'),
                       leading: CircleAvatar(
                         backgroundColor: Theme.of(context)
                             .colorScheme
@@ -68,6 +70,8 @@ class VouchersScreen extends ConsumerWidget {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          if (voucher.subtitle.isNotEmpty)
+                            Text(voucher.subtitle),
                           Text(currency.format(voucher.priceVnd)),
                           const SizedBox(height: 4),
                           Text(
