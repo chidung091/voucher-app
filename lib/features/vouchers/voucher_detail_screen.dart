@@ -250,32 +250,42 @@ class _PointsBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFF14D3A), Color(0xFFF79C2E)],
-        ),
-      ),
-      child: Row(
-        children: [
-          Text(
-            points.toString(),
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bannerWidth = constraints.maxWidth + 32;
+        return Transform.translate(
+          offset: const Offset(0, 0),
+          child: SizedBox(
+            width: bannerWidth,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFF14D3A), Color(0xFFF79C2E)],
                 ),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    points.toString(),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                        ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.white,
-                ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

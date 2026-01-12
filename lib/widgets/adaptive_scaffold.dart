@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../core/responsive.dart';
 
@@ -11,23 +10,40 @@ class AdaptiveScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
     final items = [
       _NavItem(
-        label: localizations.navHome,
-        title: localizations.dashboardTitle,
-        icon: Icons.dashboard_outlined,
+        label: 'Home',
+        title: 'Home',
+        icon: Icons.home_outlined,
         route: '/home',
       ),
       _NavItem(
-        label: localizations.navVouchers,
-        title: localizations.vouchersTitle,
-        icon: Icons.card_giftcard_outlined,
-        route: '/vouchers',
+        label: 'Players',
+        title: 'Players',
+        icon: Icons.group_outlined,
+        route: '/players',
       ),
       _NavItem(
-        label: localizations.navSettings,
-        title: localizations.settingsTitle,
+        label: 'Matches',
+        title: 'New Match',
+        icon: Icons.sports_soccer_outlined,
+        route: '/matches/new',
+      ),
+      _NavItem(
+        label: 'Leaderboard',
+        title: 'Leaderboard',
+        icon: Icons.emoji_events_outlined,
+        route: '/leaderboard',
+      ),
+      _NavItem(
+        label: 'Tournament',
+        title: 'Tournament',
+        icon: Icons.emoji_objects_outlined,
+        route: '/tournaments',
+      ),
+      _NavItem(
+        label: 'Settings',
+        title: 'Settings',
         icon: Icons.settings_outlined,
         route: '/settings',
       ),
@@ -38,8 +54,6 @@ class AdaptiveScaffold extends StatelessWidget {
         items.indexWhere((item) => location.startsWith(item.route));
     final currentIndex = selectedIndex == -1 ? 0 : selectedIndex;
     final pageTitle = items[currentIndex].title;
-    final isVoucherDetail = location.startsWith('/vouchers/');
-
     final isTablet = ResponsiveBreakpoints.isTablet(context);
     final rail = NavigationRail(
       selectedIndex: currentIndex,
@@ -68,9 +82,7 @@ class AdaptiveScaffold extends StatelessWidget {
           : child,
       bottomNavigationBar: isTablet
           ? null
-          : (isVoucherDetail
-              ? null
-              : BottomNavigationBar(
+          : BottomNavigationBar(
               currentIndex: currentIndex,
               onTap: (index) => context.go(items[index].route),
               items: [
@@ -80,7 +92,7 @@ class AdaptiveScaffold extends StatelessWidget {
                     label: item.label,
                   ),
               ],
-            )),
+            ),
     );
   }
 }

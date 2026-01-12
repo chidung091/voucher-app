@@ -1,7 +1,7 @@
 {
   "@@locale": "en",
-  "appTitle": "Voucher App",
-  "splashTagline": "Smart savings, simple control",
+  "appTitle": "FC Match Tracker",
+  "splashTagline": "Offline match history and Elo rankings",
   "navHome": "Home",
   "navVouchers": "Vouchers",
   "navSettings": "Settings",

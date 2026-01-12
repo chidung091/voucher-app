@@ -42,19 +42,29 @@ class VoucherRepository {
       ),
       Voucher(
         id: 2,
-        title: 'Weekend Cinema',
-        subtitle: 'Combo bắp nước',
-        priceVnd: 120000,
+        title: 'Phúc Long - Mã giảm giá 50k',
+        subtitle: 'Cafe và nhà hàng',
+        priceVnd: 50000,
         points: 40,
-        validUntil: DateTime(2026, 1, 15, 23, 59, 59),
+        validUntil: DateTime(2026, 3, 31, 23, 59, 59),
         description:
-            'Voucher giảm giá combo bắp nước tại rạp. Áp dụng cho các suất chiếu cuối tuần.',
+            'Vui lòng xuất trình đường link nhận quà có chứa mã evoucher cho nhân viên tại quầy trước khi thanh toán để được áp dụng evoucher. Không chấp nhận đường link chụp qua màn hình điện thoại.',
         redemptionRules:
-            'Áp dụng tại quầy vé trước suất chiếu. Không cộng dồn ưu đãi khác.',
-        afterSales: 'Hỗ trợ đổi lịch trong 24h nếu có sự cố từ phía rạp.',
-        imageAsset: 'assets/images/sample.png',
+            'Đến trực tiếp tại các cơ sở, cửa hàng của Phúc Long để đổi quà.\n'
+            'Hạn sử dụng của evoucher được hiển thị ở trên evoucher.\n'
+            'E-voucher được áp dụng tại tất cả địa điểm kinh doanh của Phuc Long (trừ cửa hàng Phúc Long Takashimaya và Phúc Long Sân Bay Tân Sơn Nhất).\n'
+            'evoucher không được sử dụng kết hợp với các chương trình quà tặng, khuyến mãi khác như cộng điểm, giảm giá.\n'
+            'Áp dụng cho tất cả các ngày trong tuần, ngày lễ, ngày tết.\n'
+            'Có thể sử dụng nhiều mã evoucher trên cùng 1 hoá đơn. evoucher sẽ không được hoàn lại tiền thừa và không có giá trị quy đổi thành tiền mặt.\n'
+            'Cả Wogi và Phúc Long không chịu trách nhiệm trong trường hợp evoucher bị mất cắp, quá hạn sử dụng, đồng thời cũng không có nghĩa vụ thay thế hoặc đền bù giá trị cho chủ nhân của evoucher.\n'
+            'Phúc Long có quyền từ chối nhận evoucher nếu bị coi là giả mạo hoặc hết hạn.\n'
+            'Vui lòng xem thêm thông tin tại website của Phuc Long: phuclong.com.vn',
+        afterSales:
+            'Hotline chăm sóc khách hàng: 1900.299.232 (từ 8h-22h hàng ngày, '
+            'bao gồm lễ tết) để được hỗ trợ.',
+        imageAsset: 'assets/images/pltea.png',
         imageAssets: [
-          'assets/images/sample.png',
+          'assets/images/pltea.png',
         ],
         isRedeemed: true,
       ),

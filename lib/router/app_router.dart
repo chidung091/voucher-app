@@ -1,14 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../features/home/home_screen.dart';
-import '../features/settings/settings_screen.dart';
 import '../features/splash/splash_screen.dart';
-import '../features/vouchers/vouchers_screen.dart';
-import '../features/vouchers/voucher_detail_screen.dart';
+import '../ui/screens/home_screen.dart';
+import '../ui/screens/leaderboard_screen.dart';
+import '../ui/screens/new_match_screen.dart';
+import '../ui/screens/players_screen.dart';
+import '../ui/screens/settings_screen.dart';
+import '../ui/screens/tournament_screen.dart';
+import '../ui/screens/data_management_screen.dart';
 import '../widgets/adaptive_scaffold.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
-
 import '../widgets/error_view.dart';
 
 GoRouter buildRouter(Ref ref) {
@@ -29,32 +30,43 @@ GoRouter buildRouter(Ref ref) {
             builder: (context, state) => const HomeScreen(),
           ),
           GoRoute(
-            path: '/vouchers',
-            name: 'vouchers',
-            builder: (context, state) => const VouchersScreen(),
+            path: '/players',
+            name: 'players',
+            builder: (context, state) => const PlayersScreen(),
           ),
           GoRoute(
-            path: '/vouchers/:id',
-            name: 'voucher-detail',
-            builder: (context, state) {
-              final id = int.tryParse(state.pathParameters['id'] ?? '');
-              return VoucherDetailScreen(voucherId: id);
-            },
+            path: '/matches/new',
+            name: 'new-match',
+            builder: (context, state) => const NewMatchScreen(),
+          ),
+          GoRoute(
+            path: '/leaderboard',
+            name: 'leaderboard',
+            builder: (context, state) => const LeaderboardScreen(),
+          ),
+          GoRoute(
+            path: '/tournaments',
+            name: 'tournaments',
+            builder: (context, state) => const TournamentScreen(),
           ),
           GoRoute(
             path: '/settings',
             name: 'settings',
             builder: (context, state) => const SettingsScreen(),
           ),
+          GoRoute(
+            path: '/settings/data',
+            name: 'data-management',
+            builder: (context, state) => const DataManagementScreen(),
+          ),
         ],
       ),
     ],
     errorBuilder: (context, state) {
-      final localizations = AppLocalizations.of(context)!;
       return ErrorView(
-        title: localizations.errorsTitle,
+        title: 'Something went wrong',
         message: state.error?.toString() ?? 'Unknown navigation error',
-        retryLabel: localizations.tryAgain,
+        retryLabel: 'Try again',
         onRetry: () => context.go('/home'),
       );
     },

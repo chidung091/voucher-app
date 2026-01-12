@@ -12,10 +12,10 @@ class VoucherApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
-    final themeMode = ThemeMode.light;
+    const themeMode = ThemeMode.light;
 
     return MaterialApp.router(
-      title: 'Voucher App',
+      title: 'FC Match Tracker',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
