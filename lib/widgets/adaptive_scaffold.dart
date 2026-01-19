@@ -24,6 +24,12 @@ class AdaptiveScaffold extends StatelessWidget {
         route: '/players',
       ),
       _NavItem(
+        label: 'Clubs',
+        title: 'Clubs',
+        icon: Icons.shield_outlined,
+        route: '/clubs',
+      ),
+      _NavItem(
         label: 'Matches',
         title: 'New Match',
         icon: Icons.sports_soccer_outlined,
@@ -34,6 +40,12 @@ class AdaptiveScaffold extends StatelessWidget {
         title: 'Leaderboard',
         icon: Icons.emoji_events_outlined,
         route: '/leaderboard',
+      ),
+      _NavItem(
+        label: 'Seasons',
+        title: 'Seasons',
+        icon: Icons.calendar_month_outlined,
+        route: '/seasons',
       ),
       _NavItem(
         label: 'Tournament',

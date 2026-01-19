@@ -10,6 +10,8 @@ import '../domain/rating_event.dart';
 import '../domain/tournament.dart';
 import '../domain/tournament_match.dart';
 import '../domain/tournament_team.dart';
+import '../domain/club.dart';
+import '../domain/season.dart';
 
 class LocalStore {
   LocalStore._(this._prefs);
@@ -25,8 +27,13 @@ class LocalStore {
   static const String _tournamentsKey = 'tournaments_v1';
   static const String _tournamentTeamsKey = 'tournament_teams_v1';
   static const String _tournamentMatchesKey = 'tournament_matches_v1';
+  static const String _clubsKey = 'clubs_v1';
   static const String _metaKey = 'app_meta_v1';
   static const String _backupKey = 'last_backup_export_v1';
+  static const String _playerStatsCachePrefix = 'player_stats_cache_v1:';
+  static const String _h2hCachePrefix = 'h2h_cache_v1:';
+  static const String _seasonConfigKey = 'season_config_v1';
+  static const String _seasonCachePrefix = 'season_cache_v1:';
 
   static const Map<String, String> _tempKeyMap = {
     _playersKey: 'players_v1_tmp',
@@ -36,10 +43,12 @@ class LocalStore {
     _tournamentsKey: 'tournaments_v1_tmp',
     _tournamentTeamsKey: 'tournament_teams_v1_tmp',
     _tournamentMatchesKey: 'tournament_matches_v1_tmp',
+    _clubsKey: 'clubs_v1_tmp',
     _metaKey: 'app_meta_v1_tmp',
+    _seasonConfigKey: 'season_config_v1_tmp',
   };
 
-  static const int _schemaVersion = 2;
+  static const int _schemaVersion = 3;
 
   Future<void> _ensureMeta() async {
     final existing = _prefs.getString(_metaKey);
@@ -48,6 +57,11 @@ class LocalStore {
       final version = meta['schemaVersion'] as int? ?? 1;
       if (version < 2) {
         await _migrateToV2();
+      }
+      if (version < 3) {
+        await _migrateToV3();
+      }
+      if (version < _schemaVersion) {
         meta['schemaVersion'] = _schemaVersion;
         meta['lastUpdatedAt'] = DateTime.now().toIso8601String();
         await _prefs.setString(_metaKey, jsonEncode(meta));
@@ -71,6 +85,19 @@ class LocalStore {
       return map;
     }).toList();
     await _prefs.setString(_playersKey, jsonEncode(migrated));
+  }
+
+  Future<void> _migrateToV3() async {
+    final rawMatches = _prefs.getString(_matchesKey);
+    if (rawMatches == null) return;
+    final decoded = jsonDecode(rawMatches) as List<dynamic>;
+    final migrated = decoded.map((item) {
+      final map = Map<String, dynamic>.from(item as Map<String, dynamic>);
+      map.putIfAbsent('ratingMode', () => 'RANKED');
+      map.putIfAbsent('eloMultiplier', () => 1.0);
+      return map;
+    }).toList();
+    await _prefs.setString(_matchesKey, jsonEncode(migrated));
   }
 
   static Future<LocalStore> getInstance() async {
@@ -212,6 +239,21 @@ class LocalStore {
     await _touchMeta();
   }
 
+  Future<List<Club>> getClubs() async {
+    final raw = _prefs.getString(_clubsKey);
+    if (raw == null) return [];
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded
+        .map((item) => Club.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> saveClubs(List<Club> clubs) async {
+    final payload = jsonEncode(clubs.map((c) => c.toJson()).toList());
+    await _prefs.setString(_clubsKey, payload);
+    await _touchMeta();
+  }
+
   Future<Map<String, dynamic>> getMeta() async {
     final raw = _prefs.getString(_metaKey);
     if (raw == null) {
@@ -235,10 +277,114 @@ class LocalStore {
     await _prefs.setString(_backupKey, payload);
   }
 
+  Future<SeasonConfig?> getSeasonConfig() async {
+    final raw = _prefs.getString(_seasonConfigKey);
+    if (raw == null) return null;
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      if (decoded.isEmpty) {
+        return SeasonConfig.defaults();
+      }
+      return SeasonConfig.fromJson(decoded);
+    } catch (_) {
+      return SeasonConfig.defaults();
+    }
+  }
+
+  Future<void> saveSeasonConfig(SeasonConfig config) async {
+    await _prefs.setString(_seasonConfigKey, jsonEncode(config.toJson()));
+  }
+
+  Future<String?> getSeasonCache(String cacheKey) async {
+    return _prefs.getString('$_seasonCachePrefix$cacheKey');
+  }
+
+  Future<void> saveSeasonCache(String cacheKey, String payload) async {
+    await _prefs.setString('$_seasonCachePrefix$cacheKey', payload);
+  }
+
+  Future<void> removeSeasonCache(String cacheKey) async {
+    await _prefs.remove('$_seasonCachePrefix$cacheKey');
+  }
+
+  Future<void> clearSeasonCache() async {
+    final keys = _prefs.getKeys();
+    for (final key in keys) {
+      if (key.startsWith(_seasonCachePrefix)) {
+        await _prefs.remove(key);
+      }
+    }
+  }
+
+  Future<Map<String, String>> getSeasonCacheEntries() async {
+    final entries = <String, String>{};
+    for (final key in _prefs.getKeys()) {
+      if (key.startsWith(_seasonCachePrefix)) {
+        final payload = _prefs.getString(key);
+        if (payload != null) {
+          entries[key.substring(_seasonCachePrefix.length)] = payload;
+        }
+      }
+    }
+    return entries;
+  }
+
+  Future<void> saveSeasonCacheEntries(Map<String, String> entries) async {
+    await clearSeasonCache();
+    for (final entry in entries.entries) {
+      await _prefs.setString('$_seasonCachePrefix${entry.key}', entry.value);
+    }
+  }
+
+  Future<String?> getH2HCache(String cacheKey) async {
+    return _prefs.getString('$_h2hCachePrefix$cacheKey');
+  }
+
+  Future<void> saveH2HCache(String cacheKey, String payload) async {
+    await _prefs.setString('$_h2hCachePrefix$cacheKey', payload);
+  }
+
+  Future<void> removeH2HCache(String cacheKey) async {
+    await _prefs.remove('$_h2hCachePrefix$cacheKey');
+  }
+
+  Future<void> clearH2HCache() async {
+    final keys = _prefs.getKeys();
+    for (final key in keys) {
+      if (key.startsWith(_h2hCachePrefix)) {
+        await _prefs.remove(key);
+      }
+    }
+  }
+
+  Future<String?> getPlayerStatsCache(String playerId) async {
+    return _prefs.getString('$_playerStatsCachePrefix$playerId');
+  }
+
+  Future<void> savePlayerStatsCache(String playerId, String payload) async {
+    await _prefs.setString('$_playerStatsCachePrefix$playerId', payload);
+  }
+
+  Future<void> removePlayerStatsCache(String playerId) async {
+    await _prefs.remove('$_playerStatsCachePrefix$playerId');
+  }
+
+  Future<void> clearPlayerStatsCache() async {
+    final keys = _prefs.getKeys();
+    for (final key in keys) {
+      if (key.startsWith(_playerStatsCachePrefix)) {
+        await _prefs.remove(key);
+      }
+    }
+  }
+
   Future<void> clearAppKeys() async {
     for (final key in _appKeys()) {
       await _prefs.remove(key);
     }
+    await clearPlayerStatsCache();
+    await clearH2HCache();
+    await clearSeasonCache();
   }
 
   Future<Map<String, dynamic>> getAllDataSnapshot() async {
@@ -254,6 +400,9 @@ class LocalStore {
           (await getTournamentTeams()).map((t) => t.toJson()).toList(),
       'tournamentMatches':
           (await getTournamentMatches()).map((m) => m.toJson()).toList(),
+      'clubs': (await getClubs()).map((c) => c.toJson()).toList(),
+      'seasonConfig': (await getSeasonConfig())?.toJson(),
+      'seasonCache': await getSeasonCacheEntries(),
       'meta': await getMeta(),
     };
   }
@@ -275,6 +424,11 @@ class LocalStore {
       await write(_tournamentsKey, snapshot['tournaments'] ?? []);
       await write(_tournamentTeamsKey, snapshot['tournamentTeams'] ?? []);
       await write(_tournamentMatchesKey, snapshot['tournamentMatches'] ?? []);
+      await write(_clubsKey, snapshot['clubs'] ?? []);
+      await write(
+        _seasonConfigKey,
+        snapshot['seasonConfig'] ?? SeasonConfig.defaults().toJson(),
+      );
       await write(_metaKey, snapshot['meta'] ?? {});
     }
 
@@ -292,6 +446,13 @@ class LocalStore {
         await _prefs.remove(temp);
       }
     }
+    final seasonCache = snapshot['seasonCache'];
+    if (seasonCache is Map<String, dynamic>) {
+      final entries = seasonCache.map(
+        (key, value) => MapEntry(key, value.toString()),
+      );
+      await saveSeasonCacheEntries(entries);
+    }
   }
 
   static List<String> _appKeys() {
@@ -303,6 +464,8 @@ class LocalStore {
       _tournamentsKey,
       _tournamentTeamsKey,
       _tournamentMatchesKey,
+      _clubsKey,
+      _seasonConfigKey,
       _metaKey,
     ];
   }

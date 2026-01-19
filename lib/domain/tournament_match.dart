@@ -10,6 +10,11 @@ class TournamentMatch {
     required this.scheduledOrder,
     required this.status,
     this.matchId,
+    this.homeAssignedStars,
+    this.awayAssignedStars,
+    this.homeClubId,
+    this.awayClubId,
+    this.clubAssignmentMode = ClubAssignmentMode.auto,
   });
 
   final String id;
@@ -20,6 +25,11 @@ class TournamentMatch {
   final int scheduledOrder;
   final TournamentMatchStatus status;
   final String? matchId;
+  final double? homeAssignedStars;
+  final double? awayAssignedStars;
+  final String? homeClubId;
+  final String? awayClubId;
+  final ClubAssignmentMode clubAssignmentMode;
 
   TournamentMatch copyWith({
     TournamentStage? stage,
@@ -28,6 +38,11 @@ class TournamentMatch {
     int? scheduledOrder,
     TournamentMatchStatus? status,
     String? matchId,
+    double? homeAssignedStars,
+    double? awayAssignedStars,
+    String? homeClubId,
+    String? awayClubId,
+    ClubAssignmentMode? clubAssignmentMode,
   }) {
     return TournamentMatch(
       id: id,
@@ -38,6 +53,11 @@ class TournamentMatch {
       scheduledOrder: scheduledOrder ?? this.scheduledOrder,
       status: status ?? this.status,
       matchId: matchId ?? this.matchId,
+      homeAssignedStars: homeAssignedStars ?? this.homeAssignedStars,
+      awayAssignedStars: awayAssignedStars ?? this.awayAssignedStars,
+      homeClubId: homeClubId ?? this.homeClubId,
+      awayClubId: awayClubId ?? this.awayClubId,
+      clubAssignmentMode: clubAssignmentMode ?? this.clubAssignmentMode,
     );
   }
 
@@ -51,6 +71,13 @@ class TournamentMatch {
       scheduledOrder: json['scheduledOrder'] as int,
       status: TournamentMatchStatusJson.fromJson(json['status'] as String),
       matchId: json['matchId'] as String?,
+      homeAssignedStars: (json['homeAssignedStars'] as num?)?.toDouble(),
+      awayAssignedStars: (json['awayAssignedStars'] as num?)?.toDouble(),
+      homeClubId: json['homeClubId'] as String?,
+      awayClubId: json['awayClubId'] as String?,
+      clubAssignmentMode: ClubAssignmentModeJson.fromJson(
+        json['clubAssignmentMode'] as String? ?? 'AUTO',
+      ),
     );
   }
 
@@ -64,6 +91,11 @@ class TournamentMatch {
       'scheduledOrder': scheduledOrder,
       'status': status.toJson(),
       'matchId': matchId,
+      'homeAssignedStars': homeAssignedStars,
+      'awayAssignedStars': awayAssignedStars,
+      'homeClubId': homeClubId,
+      'awayClubId': awayClubId,
+      'clubAssignmentMode': clubAssignmentMode.toJson(),
     };
   }
 }

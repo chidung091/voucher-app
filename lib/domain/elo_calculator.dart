@@ -29,6 +29,17 @@ class EloCalculator {
     return updated.round();
   }
 
+  double delta({
+    required int rating,
+    required int opponentRating,
+    required double actualScore,
+    required int gamesPlayed,
+  }) {
+    final k = kFactor(gamesPlayed);
+    final expected = expectedScore(rating, opponentRating);
+    return k * (actualScore - expected);
+  }
+
   double expectedScoreTeam(int teamRatingA, int teamRatingB) {
     return expectedScore(teamRatingA, teamRatingB);
   }

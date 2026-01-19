@@ -14,6 +14,7 @@ class NewMatchScreen extends StatefulWidget {
 
 class _NewMatchScreenState extends State<NewMatchScreen> {
   MatchMode _mode = MatchMode.oneVOne;
+  MatchRatingMode _ratingMode = MatchRatingMode.ranked;
   List<Player> _players = [];
   String? _sideA1;
   String? _sideA2;
@@ -21,6 +22,9 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
   String? _sideB2;
   final TextEditingController _scoreA = TextEditingController(text: '0');
   final TextEditingController _scoreB = TextEditingController(text: '0');
+  final TextEditingController _customMultiplierController =
+      TextEditingController(text: '1.0');
+  bool _useCustomMultiplier = false;
   late Future<PlayerService> _playerServiceFuture;
   late Future<MatchService> _matchServiceFuture;
   String? _error;
@@ -37,6 +41,7 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
   void dispose() {
     _scoreA.dispose();
     _scoreB.dispose();
+    _customMultiplierController.dispose();
     super.dispose();
   }
 
@@ -62,6 +67,8 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
       final scoreA = int.tryParse(_scoreA.text) ?? 0;
       final scoreB = int.tryParse(_scoreB.text) ?? 0;
 
+      final multiplier = _effectiveMultiplier();
+
       await matchService.createMatch(
         MatchInput(
           mode: _mode,
@@ -70,6 +77,8 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
           scoreA: scoreA,
           scoreB: scoreB,
           playedAt: DateTime.now(),
+          ratingMode: _ratingMode,
+          eloMultiplier: multiplier,
         ),
       );
 
@@ -84,6 +93,16 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
         _error = error.toString();
       });
     }
+  }
+
+  double _effectiveMultiplier() {
+    if (_useCustomMultiplier) {
+      final parsed = double.tryParse(_customMultiplierController.text);
+      if (parsed != null && parsed > 0) {
+        return parsed;
+      }
+    }
+    return _ratingMode.defaultMultiplier();
   }
 
   @override
@@ -124,6 +143,62 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
             border: OutlineInputBorder(),
           ),
         ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<MatchRatingMode>(
+          value: _ratingMode,
+          items: const [
+            DropdownMenuItem(
+              value: MatchRatingMode.friendly,
+              child: Text('Friendly'),
+            ),
+            DropdownMenuItem(
+              value: MatchRatingMode.ranked,
+              child: Text('Ranked'),
+            ),
+            DropdownMenuItem(
+              value: MatchRatingMode.tournament,
+              child: Text('Tournament'),
+            ),
+          ],
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() {
+              _ratingMode = value;
+              if (!_useCustomMultiplier) {
+                _customMultiplierController.text =
+                    _ratingMode.defaultMultiplier().toStringAsFixed(1);
+              }
+            });
+          },
+          decoration: const InputDecoration(
+            labelText: 'Rating mode',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Multiplier: ${_effectiveMultiplier().toStringAsFixed(1)}x',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 8),
+        SwitchListTile(
+          title: const Text('Custom multiplier'),
+          value: _useCustomMultiplier,
+          onChanged: (value) {
+            setState(() => _useCustomMultiplier = value);
+          },
+        ),
+        if (_useCustomMultiplier) ...[
+          const SizedBox(height: 8),
+          TextField(
+            controller: _customMultiplierController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Elo multiplier',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         Text('Side A', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),

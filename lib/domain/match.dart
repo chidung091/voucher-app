@@ -11,11 +11,14 @@ class Match {
     required this.result,
     required this.playedAt,
     required this.createdAt,
+    this.ratingMode = MatchRatingMode.ranked,
+    double? eloMultiplier,
     this.idempotencyKey,
     this.tournamentId,
     this.tournamentMatchId,
     this.metadata,
-  });
+  }) : eloMultiplier =
+            eloMultiplier ?? ratingMode.defaultMultiplier();
 
   final String id;
   final MatchMode mode;
@@ -26,6 +29,8 @@ class Match {
   final MatchResult result;
   final DateTime playedAt;
   final DateTime createdAt;
+  final MatchRatingMode ratingMode;
+  final double eloMultiplier;
   final String? idempotencyKey;
   final String? tournamentId;
   final String? tournamentMatchId;
@@ -44,6 +49,10 @@ class Match {
       result: MatchResultJson.fromJson(json['result'] as String),
       playedAt: DateTime.parse(json['playedAt'] as String),
       createdAt: DateTime.parse(json['createdAt'] as String),
+      ratingMode: MatchRatingModeJson.fromJson(
+        json['ratingMode'] as String? ?? 'RANKED',
+      ),
+      eloMultiplier: (json['eloMultiplier'] as num?)?.toDouble(),
       idempotencyKey: json['idempotencyKey'] as String?,
       tournamentId: json['tournamentId'] as String?,
       tournamentMatchId: json['tournamentMatchId'] as String?,
@@ -62,6 +71,8 @@ class Match {
       'result': result.toJson(),
       'playedAt': playedAt.toIso8601String(),
       'createdAt': createdAt.toIso8601String(),
+      'ratingMode': ratingMode.toJson(),
+      'eloMultiplier': eloMultiplier,
       'idempotencyKey': idempotencyKey,
       'tournamentId': tournamentId,
       'tournamentMatchId': tournamentMatchId,

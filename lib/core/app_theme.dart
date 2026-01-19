@@ -63,6 +63,28 @@ class AppTheme {
           const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: Colors.white,
+        selectedItemColor: colorScheme.primary,
+        unselectedItemColor: Colors.black54,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: Colors.white,
+        selectedIconTheme: IconThemeData(color: colorScheme.primary),
+        unselectedIconTheme: const IconThemeData(color: Colors.black54),
+        selectedLabelTextStyle: TextStyle(
+          color: colorScheme.primary,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelTextStyle: const TextStyle(
+          color: Colors.black54,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 

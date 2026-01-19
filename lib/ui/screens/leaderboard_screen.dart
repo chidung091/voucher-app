@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../domain/player.dart';
 import '../../domain/player_rating.dart';
@@ -29,11 +30,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   Future<void> _load() async {
     final playerService = await _playerServiceFuture;
     final matchService = await _matchServiceFuture;
-    final players = await playerService.listPlayers(includeDeleted: true);
+    final players = await playerService.listPlayers();
     final ratings = await matchService.getLeaderboard();
+    final activeIds = players.map((player) => player.id).toSet();
+    final filteredRatings =
+        ratings.where((rating) => activeIds.contains(rating.playerId)).toList();
     setState(() {
       _players = players;
-      _ratings = ratings;
+      _ratings = filteredRatings;
     });
   }
 
@@ -70,6 +74,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 subtitle: Text(
                   'W ${rating.wins}  D ${rating.draws}  L ${rating.losses}',
                 ),
+                onTap: () => context.go('/players/${rating.playerId}'),
                 trailing: Text('${rating.elo}'),
               ),
             ),

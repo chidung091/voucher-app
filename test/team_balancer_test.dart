@@ -174,4 +174,96 @@ void main() {
       second.teams[0][0].player.id,
     );
   });
+
+  test('TeamBalancer allows mixed teams when player count is odd', () {
+    final players = [
+      Player(
+        id: 'a',
+        displayName: 'A',
+        skillLevel: 2,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+      Player(
+        id: 'b',
+        displayName: 'B',
+        skillLevel: 2,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+      Player(
+        id: 'c',
+        displayName: 'C',
+        skillLevel: 2,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+      Player(
+        id: 'd',
+        displayName: 'D',
+        skillLevel: 2,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+      Player(
+        id: 'e',
+        displayName: 'E',
+        skillLevel: 2,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    ];
+    final ratings = {
+      'a': PlayerRating(
+        playerId: 'a',
+        elo: 1200,
+        gamesPlayed: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        updatedAt: DateTime.now(),
+      ),
+      'b': PlayerRating(
+        playerId: 'b',
+        elo: 1100,
+        gamesPlayed: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        updatedAt: DateTime.now(),
+      ),
+      'c': PlayerRating(
+        playerId: 'c',
+        elo: 1000,
+        gamesPlayed: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        updatedAt: DateTime.now(),
+      ),
+      'd': PlayerRating(
+        playerId: 'd',
+        elo: 980,
+        gamesPlayed: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        updatedAt: DateTime.now(),
+      ),
+      'e': PlayerRating(
+        playerId: 'e',
+        elo: 960,
+        gamesPlayed: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        updatedAt: DateTime.now(),
+      ),
+    };
+    final pool = TeamBalancer.buildPool(players, ratings);
+    final result = TeamBalancer().balanceFor2v2(pool);
+    final teamSizes = result.teams.map((team) => team.length).toList();
+    expect(teamSizes.where((size) => size == 1).length, 1);
+    expect(teamSizes.where((size) => size == 2).length, 2);
+  });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../domain/player.dart';
 import '../../services/player_service.dart';
@@ -86,12 +87,19 @@ class _PlayersScreenState extends State<PlayersScreen> {
       ),
     );
     if (result != null) {
-      await service.updatePlayer(
-        player.id,
-        result.name,
-        skillLevel: result.skillLevel,
-      );
-      await _load(service);
+      try {
+        await service.updatePlayer(
+          player.id,
+          result.name,
+          skillLevel: result.skillLevel,
+        );
+        await _load(service);
+      } catch (error) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
     }
   }
 
@@ -163,6 +171,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                     leading: Chip(
                       label: Text('L${player.skillLevel}'),
                     ),
+                    onTap: () => context.go('/players/${player.id}'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

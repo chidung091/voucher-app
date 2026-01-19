@@ -60,6 +60,7 @@ class ExportPayloadValidator {
 
     final data = payload['data'] as Map<String, dynamic>;
     _validatePlayers(data['players'], errors);
+    _validateClubs(data['clubs'], errors);
     _validateMatches(data['matches'], errors);
     _validateTournaments(data['tournaments'], data['tournamentTeams'], errors);
     _validateRatingEvents(data['ratingEvents'], errors);
@@ -132,6 +133,27 @@ class ExportPayloadValidator {
     }
   }
 
+  static void _validateClubs(Object? clubs, List<String> errors) {
+    if (clubs == null) return;
+    if (clubs is! List<dynamic>) {
+      errors.add('clubs must be a list.');
+      return;
+    }
+    for (final item in clubs) {
+      if (item is! Map<String, dynamic>) {
+        errors.add('club item invalid.');
+        continue;
+      }
+      final id = item['id'] as String?;
+      if (id == null || !_uuidRegex.hasMatch(id)) {
+        errors.add('club id invalid.');
+      }
+      if (item['stars'] is! num) {
+        errors.add('club stars invalid.');
+      }
+    }
+  }
+
   static void _validateTournaments(
     Object? tournaments,
     Object? teams,
@@ -160,14 +182,17 @@ class ExportPayloadValidator {
       }
       final mode = MatchModeJson.fromJson(item['mode'] as String? ?? '1V1');
       final teamList = teamMap[id] ?? [];
-      if (teamList.length != 3) {
-        errors.add('tournament $id must have 3 teams.');
+      if (teamList.length < 2) {
+        errors.add('tournament $id must have at least 2 teams.');
         continue;
       }
-      final expected = mode == MatchMode.oneVOne ? 1 : 2;
       for (final team in teamList) {
         final players = team['playerIds'];
-        if (players is! List || players.length != expected) {
+        if (players is! List || players.isEmpty || players.length > 2) {
+          errors.add('tournament team size invalid.');
+          continue;
+        }
+        if (mode == MatchMode.oneVOne && players.length != 1) {
           errors.add('tournament team size mismatch.');
         }
       }

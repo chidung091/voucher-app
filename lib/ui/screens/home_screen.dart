@@ -26,6 +26,12 @@ class HomeScreen extends StatelessWidget {
           onTap: () => context.go('/players'),
         ),
         _ActionCard(
+          title: 'Clubs',
+          subtitle: 'Manage club catalog and stars.',
+          icon: Icons.shield_outlined,
+          onTap: () => context.go('/clubs'),
+        ),
+        _ActionCard(
           title: 'New Match',
           subtitle: 'Record 1v1 or 2v2 matches.',
           icon: Icons.sports_soccer_outlined,
@@ -36,6 +42,18 @@ class HomeScreen extends StatelessWidget {
           subtitle: 'Track Elo rankings.',
           icon: Icons.emoji_events_outlined,
           onTap: () => context.go('/leaderboard'),
+        ),
+        _ActionCard(
+          title: 'Seasons',
+          subtitle: 'Monthly/quarterly/yearly rankings.',
+          icon: Icons.calendar_month_outlined,
+          onTap: () => context.go('/seasons'),
+        ),
+        _ActionCard(
+          title: 'Head-to-Head',
+          subtitle: 'Compare 1v1 and 2v2 matchups.',
+          icon: Icons.compare_arrows_outlined,
+          onTap: () => context.go('/h2h'),
         ),
         _ActionCard(
           title: 'Tournament',

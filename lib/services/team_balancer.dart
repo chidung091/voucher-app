@@ -18,68 +18,83 @@ class TeamBalanceResult {
 
 class TeamBalancer {
   TeamBalanceResult balanceFor1v1(List<PlayerEloEntry> pool) {
-    if (pool.length < 3) {
-      throw ArgumentError('Need at least 3 players for 1v1 tournament.');
+    if (pool.length < 2) {
+      throw ArgumentError('Need at least 2 players for 1v1 tournament.');
     }
     final sorted = [...pool]..sort(_byId);
-    final best = _selectClosestRange(sorted, 3);
     return TeamBalanceResult(
-      teams: [
-        [best[0]],
-        [best[1]],
-        [best[2]],
-      ],
-      teamTotals: [best[0].elo, best[1].elo, best[2].elo],
+      teams: [for (final entry in sorted) [entry]],
+      teamTotals: [for (final entry in sorted) entry.elo],
     );
   }
 
   TeamBalanceResult balanceFor2v2(List<PlayerEloEntry> pool) {
-    if (pool.length < 6) {
-      throw ArgumentError('Need at least 6 players for 2v2 tournament.');
+    if (pool.length < 3) {
+      throw ArgumentError('Need at least 3 players for team tournament.');
     }
     final sorted = [...pool]..sort(_byId);
-    final chosen = _selectClosestRange(sorted, 6);
-    final pairing = _bestPairing(chosen);
-    final totals = pairing
-        .map((pair) => pair[0].elo + pair[1].elo)
-        .toList();
-    return TeamBalanceResult(teams: pairing, teamTotals: totals);
+    if (sorted.length.isOdd) {
+      final mixed = _bestMixedPairing(sorted);
+      return _buildResult(mixed.teams, mixed.solo);
+    }
+    final pairing = _bestPairing(sorted);
+    return _buildResult(pairing, null);
   }
 
-  List<PlayerEloEntry> _selectClosestRange(
-    List<PlayerEloEntry> sorted,
-    int count,
+  TeamBalanceResult _buildResult(
+    List<List<PlayerEloEntry>> pairs,
+    PlayerEloEntry? solo,
   ) {
-    if (sorted.length == count) return sorted;
-    final combos = <List<PlayerEloEntry>>[];
-    void dfs(int start, List<PlayerEloEntry> current) {
-      if (current.length == count) {
-        combos.add([...current]);
-        return;
-      }
-      for (var i = start; i < sorted.length; i++) {
-        current.add(sorted[i]);
-        dfs(i + 1, current);
-        current.removeLast();
+    final teams = <List<PlayerEloEntry>>[
+      for (final pair in pairs) [...pair],
+      if (solo != null) [solo],
+    ];
+    teams.sort((a, b) => _teamSignature(a).compareTo(_teamSignature(b)));
+    final totals = teams
+        .map((team) => team.map((entry) => entry.elo).reduce((a, b) => a + b))
+        .toList();
+    return TeamBalanceResult(teams: teams, teamTotals: totals);
+  }
+
+  _MixedPairingResult _bestMixedPairing(List<PlayerEloEntry> players) {
+    _MixedPairingResult? best;
+    for (var i = 0; i < players.length; i++) {
+      final solo = players[i];
+      final remaining = [
+        for (var j = 0; j < players.length; j++)
+          if (j != i) players[j],
+      ];
+      final pairs = _bestPairing(remaining);
+      final totals = [
+        for (final pair in pairs) pair[0].elo + pair[1].elo,
+        solo.elo,
+      ];
+      totals.sort();
+      final range = totals.last - totals.first;
+      final variance = _varianceTotals(totals);
+      final signature = _mixedSignature(pairs, solo);
+      final candidate = _MixedPairingResult(
+        teams: pairs,
+        solo: solo,
+        range: range,
+        variance: variance,
+        signature: signature,
+      );
+      if (best == null || candidate.compareTo(best) < 0) {
+        best = candidate;
       }
     }
-
-    dfs(0, []);
-    combos.sort((a, b) {
-      final rangeA = _range(a);
-      final rangeB = _range(b);
-      if (rangeA != rangeB) return rangeA.compareTo(rangeB);
-      return _lexCompare(a, b);
-    });
-    return combos.first;
+    return best!;
   }
+
 
   List<List<PlayerEloEntry>> _bestPairing(List<PlayerEloEntry> players) {
     final pairings = <List<List<PlayerEloEntry>>>[];
     final used = List<bool>.filled(players.length, false);
 
+    final targetPairs = players.length ~/ 2;
     void backtrack(List<List<PlayerEloEntry>> current) {
-      if (current.length == 3) {
+      if (current.length == targetPairs) {
         pairings.add(current.map((pair) => [...pair]).toList());
         return;
       }
@@ -125,13 +140,13 @@ class TeamBalancer {
     return totals.last - totals.first;
   }
 
-  int _range(List<PlayerEloEntry> players) {
-    final elos = players.map((e) => e.elo).toList()..sort();
-    return elos.last - elos.first;
-  }
 
   double _variance(List<List<PlayerEloEntry>> pairing) {
     final totals = pairing.map((pair) => pair[0].elo + pair[1].elo).toList();
+    return _varianceTotals(totals);
+  }
+
+  double _varianceTotals(List<int> totals) {
     final avg = totals.reduce((a, b) => a + b) / totals.length;
     final variance = totals
         .map((value) => (value - avg) * (value - avg))
@@ -161,15 +176,19 @@ class TeamBalancer {
     return pairs;
   }
 
-  int _lexCompare(List<PlayerEloEntry> a, List<PlayerEloEntry> b) {
-    final aIds = a.map((e) => e.player.id).toList();
-    final bIds = b.map((e) => e.player.id).toList();
-    for (var i = 0; i < aIds.length; i++) {
-      final diff = aIds[i].compareTo(bIds[i]);
-      if (diff != 0) return diff;
-    }
-    return 0;
+  String _mixedSignature(
+    List<List<PlayerEloEntry>> pairing,
+    PlayerEloEntry solo,
+  ) {
+    final pairs = _pairingSignature(pairing);
+    return '${solo.player.id}|${pairs.join(',')}';
   }
+
+  String _teamSignature(List<PlayerEloEntry> team) {
+    final ids = team.map((entry) => entry.player.id).toList()..sort();
+    return ids.join('-');
+  }
+
 
   int _byId(PlayerEloEntry a, PlayerEloEntry b) {
     return a.player.id.compareTo(b.player.id);
@@ -187,5 +206,29 @@ class TeamBalancer {
           return PlayerEloEntry(player: player, elo: elo);
         })
         .toList();
+  }
+}
+
+class _MixedPairingResult {
+  _MixedPairingResult({
+    required this.teams,
+    required this.solo,
+    required this.range,
+    required this.variance,
+    required this.signature,
+  });
+
+  final List<List<PlayerEloEntry>> teams;
+  final PlayerEloEntry solo;
+  final int range;
+  final double variance;
+  final String signature;
+
+  int compareTo(_MixedPairingResult other) {
+    final rangeDiff = range.compareTo(other.range);
+    if (rangeDiff != 0) return rangeDiff;
+    final varianceDiff = variance.compareTo(other.variance);
+    if (varianceDiff != 0) return varianceDiff;
+    return signature.compareTo(other.signature);
   }
 }

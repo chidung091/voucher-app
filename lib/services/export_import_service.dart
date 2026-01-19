@@ -5,6 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../data/local_store.dart';
+import '../domain/club.dart';
+import '../domain/elo_calculator.dart';
 import '../domain/elo_config.dart';
 import '../domain/enums.dart';
 import '../domain/match.dart';
@@ -14,7 +16,11 @@ import '../domain/rating_event.dart';
 import '../domain/tournament.dart';
 import '../domain/tournament_match.dart';
 import '../domain/tournament_team.dart';
+import '../domain/season.dart';
 import 'export_validator.dart';
+import 'head_to_head_service.dart';
+import 'player_stats_service.dart';
+import 'season_service.dart';
 
 enum ImportMode { overwrite, merge }
 
@@ -76,6 +82,10 @@ class ExportImportService {
         await _store.saveBackupPayload(backup);
         await _store.clearAppKeys();
         await _store.setAllDataSnapshot(payload.data, overwrite: true);
+        await PlayerStatsService(_store, EloCalculator())
+            .invalidateAllStatsCache();
+        await HeadToHeadService(_store).invalidateAllH2HCache();
+        await SeasonService(_store, EloCalculator()).invalidateAllSeasonCache();
         return ImportReport(
           addedPlayers: payload.data['players'].length as int,
           updatedPlayers: 0,
@@ -85,7 +95,12 @@ class ExportImportService {
         );
       }
 
-      return _merge(payload);
+      final report = await _merge(payload);
+      await PlayerStatsService(_store, EloCalculator())
+          .invalidateAllStatsCache();
+      await HeadToHeadService(_store).invalidateAllH2HCache();
+      await SeasonService(_store, EloCalculator()).invalidateAllSeasonCache();
+      return report;
     });
   }
 
@@ -158,6 +173,18 @@ class ExportImportService {
         .map((item) => TournamentMatch.fromJson(item as Map<String, dynamic>))
         .toList()
       ..sort((a, b) => a.scheduledOrder.compareTo(b.scheduledOrder));
+    final clubs = (snapshot['clubs'] as List<dynamic>? ?? [])
+        .map((item) => Club.fromJson(item as Map<String, dynamic>))
+        .toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final seasonConfig = snapshot['seasonConfig'] == null
+        ? null
+        : SeasonConfig.fromJson(
+            snapshot['seasonConfig'] as Map<String, dynamic>,
+          );
+    final seasonCache =
+        (snapshot['seasonCache'] as Map<String, dynamic>? ?? {})
+            .map((key, value) => MapEntry(key, value as String));
     final ratings = (snapshot['playerRatings'] as Map<String, dynamic>)
         .map((key, value) =>
             MapEntry(key, PlayerRating.fromJson(value as Map<String, dynamic>)));
@@ -175,6 +202,9 @@ class ExportImportService {
         'tournaments': tournaments.map((t) => t.toJson()).toList(),
         'tournamentTeams': tournamentTeams.map((t) => t.toJson()).toList(),
         'tournamentMatches': tournamentMatches.map((m) => m.toJson()).toList(),
+        'clubs': clubs.map((c) => c.toJson()).toList(),
+        'seasonConfig': seasonConfig?.toJson(),
+        'seasonCache': seasonCache,
         'meta': snapshot['meta'] ?? {},
       },
     );
@@ -191,6 +221,17 @@ class ExportImportService {
       map.putIfAbsent('skillLevel', () => 2);
       return map;
     }).toList();
+    final matches = (data['matches'] as List<dynamic>?) ?? [];
+    data['matches'] = matches.map((item) {
+      final map = Map<String, dynamic>.from(item as Map<String, dynamic>);
+      map.putIfAbsent('ratingMode', () => 'RANKED');
+      map.putIfAbsent('eloMultiplier', () => 1.0);
+      return map;
+    }).toList();
+    data['clubs'] = data['clubs'] ?? [];
+    data['seasonConfig'] =
+        data['seasonConfig'] ?? SeasonConfig.defaults().toJson();
+    data['seasonCache'] = data['seasonCache'] ?? <String, dynamic>{};
     final meta = Map<String, dynamic>.from(data['meta'] as Map<String, dynamic>? ?? {});
     meta['schemaVersion'] = LocalStore.schemaVersion;
     data['meta'] = meta;
@@ -227,6 +268,14 @@ class ExportImportService {
     final tournamentMatches = (data['tournamentMatches'] as List<dynamic>)
         .map((item) => TournamentMatch.fromJson(item as Map<String, dynamic>))
         .toList();
+    final clubs = (data['clubs'] as List<dynamic>? ?? [])
+        .map((item) => Club.fromJson(item as Map<String, dynamic>))
+        .toList();
+    final incomingSeasonConfig =
+        SeasonConfig.fromJson(data['seasonConfig'] as Map<String, dynamic>);
+    final incomingSeasonCache =
+        (data['seasonCache'] as Map<String, dynamic>? ?? {})
+            .map((key, value) => MapEntry(key, value as String));
 
     final localPlayers = await _store.getPlayers();
     final localRatings = await _store.getRatings();
@@ -235,6 +284,9 @@ class ExportImportService {
     final localTournaments = await _store.getTournaments();
     final localTeams = await _store.getTournamentTeams();
     final localMatchesMeta = await _store.getTournamentMatches();
+    final localClubs = await _store.getClubs();
+    final localSeasonConfig = await _store.getSeasonConfig();
+    final localSeasonCache = await _store.getSeasonCacheEntries();
 
       final playerMap = {for (final player in localPlayers) player.id: player};
       var addedPlayers = 0;
@@ -327,6 +379,21 @@ class ExportImportService {
         tournamentMatchMap[match.id] = match;
       }
 
+      final clubMap = {for (final club in localClubs) club.id: club};
+      for (final club in clubs) {
+        final existing = clubMap[club.id];
+        if (existing == null || club.updatedAt.isAfter(existing.updatedAt)) {
+          clubMap[club.id] = club;
+        }
+      }
+
+      final selectedSeasonConfig = localSeasonConfig == null ||
+              incomingSeasonConfig.updatedAt
+                  .isAfter(localSeasonConfig.updatedAt)
+          ? incomingSeasonConfig
+          : localSeasonConfig;
+      final mergedSeasonCache = {...localSeasonCache, ...incomingSeasonCache};
+
       final updatedMatches = matchMap.values.toList();
       final updatedEvents = eventMap.values.toList();
 
@@ -364,8 +431,11 @@ class ExportImportService {
       await _store.saveRatingEvents(updatedEvents);
       await _store.saveTournaments(tournamentMap.values.toList());
       await _store.saveTournamentTeams(teamMap.values.toList());
-    await _store.saveTournamentMatches(tournamentMatchMap.values.toList());
-    await _store.saveMeta(metaUpdated);
+      await _store.saveTournamentMatches(tournamentMatchMap.values.toList());
+      await _store.saveClubs(clubMap.values.toList());
+      await _store.saveSeasonConfig(selectedSeasonConfig);
+      await _store.saveSeasonCacheEntries(mergedSeasonCache);
+      await _store.saveMeta(metaUpdated);
 
     return ImportReport(
       addedPlayers: addedPlayers,

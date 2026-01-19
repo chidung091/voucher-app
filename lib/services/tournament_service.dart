@@ -1,13 +1,18 @@
 import 'package:uuid/uuid.dart';
 
 import '../data/local_store.dart';
+import '../domain/elo_calculator.dart';
 import '../domain/enums.dart';
 import '../domain/match.dart';
 import '../domain/tournament.dart';
 import '../domain/tournament_match.dart';
 import '../domain/tournament_standings.dart';
 import '../domain/tournament_team.dart';
+import 'club_assignment_service.dart';
+import 'head_to_head_service.dart';
 import 'match_service.dart';
+import 'player_stats_service.dart';
+import 'season_service.dart';
 import 'team_balancer.dart';
 
 class TournamentInput {
@@ -77,7 +82,7 @@ class TournamentService {
         finalsEnabled: input.finalsEnabled,
       );
 
-      final teams = List.generate(3, (index) {
+      final teams = List.generate(input.teams.length, (index) {
         final inputTeam = input.teams[index];
         return TournamentTeam(
           id: _uuid.v4(),
@@ -88,36 +93,12 @@ class TournamentService {
         );
       });
 
-      final matches = [
-        TournamentMatch(
-          id: _uuid.v4(),
-          tournamentId: tournament.id,
-          stage: TournamentStage.group,
-          homeTeamIndex: 0,
-          awayTeamIndex: 1,
-          scheduledOrder: 1,
-          status: TournamentMatchStatus.scheduled,
-        ),
-        TournamentMatch(
-          id: _uuid.v4(),
-          tournamentId: tournament.id,
-          stage: TournamentStage.group,
-          homeTeamIndex: 0,
-          awayTeamIndex: 2,
-          scheduledOrder: 2,
-          status: TournamentMatchStatus.scheduled,
-        ),
-        TournamentMatch(
-          id: _uuid.v4(),
-          tournamentId: tournament.id,
-          stage: TournamentStage.group,
-          homeTeamIndex: 1,
-          awayTeamIndex: 2,
-          scheduledOrder: 3,
-          status: TournamentMatchStatus.scheduled,
-        ),
-      ];
+      final matches = _buildGroupMatches(
+        tournamentId: tournament.id,
+        teamCount: teams.length,
+      );
       if (tournament.finalsEnabled) {
+        final order = matches.length + 1;
         matches.add(
           TournamentMatch(
             id: _uuid.v4(),
@@ -125,7 +106,7 @@ class TournamentService {
             stage: TournamentStage.finalStage,
             homeTeamIndex: -1,
             awayTeamIndex: -1,
-            scheduledOrder: 4,
+            scheduledOrder: order,
             status: TournamentMatchStatus.scheduled,
           ),
         );
@@ -142,6 +123,9 @@ class TournamentService {
       await _store.saveTournaments(tournaments);
       await _store.saveTournamentTeams(teamsList);
       await _store.saveTournamentMatches(matchesList);
+      await ClubAssignmentService(_store).assignForTournamentSchedule(
+        tournamentId: tournament.id,
+      );
 
       return await getTournament(tournament.id);
     });
@@ -167,10 +151,9 @@ class TournamentService {
         ? balancer.balanceFor1v1(entries)
         : balancer.balanceFor2v2(entries);
 
-    final teams = List.generate(3, (index) {
-      final members = result.teams[index]
-          .map((entry) => entry.player.id)
-          .toList();
+    final teams = List.generate(result.teams.length, (index) {
+      final members =
+          result.teams[index].map((entry) => entry.player.id).toList();
       return TournamentTeamInput(
         name: 'Team ${index + 1}',
         playerIds: members,
@@ -224,6 +207,8 @@ class TournamentService {
     required String tournamentMatchId,
     required int scoreHome,
     required int scoreAway,
+    MatchRatingMode? ratingMode,
+    double? eloMultiplier,
     DateTime? playedAt,
     bool forfeit = false,
   }) {
@@ -277,7 +262,13 @@ class TournamentService {
         idempotencyKey: 'tournament-$tournamentId-$tournamentMatchId',
         tournamentId: tournamentId,
         tournamentMatchId: tournamentMatchId,
-        metadata: forfeit ? {'forfeit': true} : null,
+        ratingMode: ratingMode ?? MatchRatingMode.tournament,
+        eloMultiplier: eloMultiplier ??
+            (ratingMode ?? MatchRatingMode.tournament).defaultMultiplier(),
+        metadata: _buildMatchMetadata(
+          tournamentMatch: tournamentMatch,
+          forfeit: forfeit,
+        ),
       );
 
       final storeMatches = await _store.getMatches();
@@ -292,6 +283,11 @@ class TournamentService {
       await _store.saveMatches(storeMatches);
       await _store.saveRatings(storeRatings);
       await _store.saveRatingEvents(storeEvents);
+      final statsService = PlayerStatsService(_store, EloCalculator());
+      await statsService.invalidatePlayerStatsCacheForMatch(result.match);
+      await HeadToHeadService(_store).invalidateH2HCacheForMatch(result.match);
+      await SeasonService(_store, EloCalculator())
+          .invalidateSeasonCacheForMatch(result.match);
 
       matches[matchIndex] = tournamentMatch.copyWith(
         matchId: result.match.id,
@@ -303,9 +299,15 @@ class TournamentService {
             item.stage == TournamentStage.group &&
             item.status == TournamentMatchStatus.done;
       }).length;
+      final groupMatchesTotal = matches.where((item) {
+        return item.tournamentId == tournamentId &&
+            item.stage == TournamentStage.group;
+      }).length;
 
       Tournament updatedTournament = tournament;
-      if (groupMatchesDone == 3 && tournament.status == TournamentStatus.group) {
+      String? finalMatchToAssign;
+      if (groupMatchesDone == groupMatchesTotal &&
+          tournament.status == TournamentStatus.group) {
         final standings = TournamentStandingsCalculator().compute(
           teams: tournamentTeams,
           matches: matches,
@@ -322,7 +324,13 @@ class TournamentService {
             matches[finalIndex] = matches[finalIndex].copyWith(
               homeTeamIndex: topTwo[0].teamIndex,
               awayTeamIndex: topTwo[1].teamIndex,
+              homeAssignedStars: null,
+              awayAssignedStars: null,
+              homeClubId: null,
+              awayClubId: null,
+              clubAssignmentMode: ClubAssignmentMode.auto,
             );
+            finalMatchToAssign = matches[finalIndex].id;
             updatedTournament = updatedTournament.copyWith(
               status: TournamentStatus.finalStage,
               updatedAt: DateTime.now(),
@@ -350,6 +358,12 @@ class TournamentService {
       tournaments[tournamentIndex] = updatedTournament;
       await _store.saveTournamentMatches(matches);
       await _store.saveTournaments(tournaments);
+      if (finalMatchToAssign != null) {
+        await ClubAssignmentService(_store).assignForTournamentSchedule(
+          tournamentId: tournamentId,
+          matchIds: {finalMatchToAssign!},
+        );
+      }
 
       return await getTournament(tournamentId);
     });
@@ -388,6 +402,12 @@ class TournamentService {
           (m) => m.stage == TournamentStage.finalStage,
         );
         if (!hasFinal) {
+          final order = matches
+                  .where((m) =>
+                      m.tournamentId == tournamentId &&
+                      m.stage == TournamentStage.group)
+                  .length +
+              1;
           matches.add(
             TournamentMatch(
               id: _uuid.v4(),
@@ -395,7 +415,7 @@ class TournamentService {
               stage: TournamentStage.finalStage,
               homeTeamIndex: -1,
               awayTeamIndex: -1,
-              scheduledOrder: 4,
+              scheduledOrder: order,
               status: TournamentMatchStatus.scheduled,
             ),
           );
@@ -411,8 +431,11 @@ class TournamentService {
         return item.stage == TournamentStage.group &&
             item.status == TournamentMatchStatus.done;
       }).length;
+      final groupMatchesTotal = tournamentMatches.where((item) {
+        return item.stage == TournamentStage.group;
+      }).length;
 
-      if (groupMatchesDone == 3) {
+      if (groupMatchesDone == groupMatchesTotal) {
         final standings = TournamentStandingsCalculator().compute(
           teams: teams,
           matches: matches
@@ -447,6 +470,17 @@ class TournamentService {
       tournaments[index] = updated;
       await _store.saveTournamentMatches(matches);
       await _store.saveTournaments(tournaments);
+      await ClubAssignmentService(_store).assignForTournamentSchedule(
+        tournamentId: tournamentId,
+        matchIds: {
+          for (final match in matches)
+            if (match.tournamentId == tournamentId &&
+                match.stage == TournamentStage.finalStage &&
+                match.homeTeamIndex >= 0 &&
+                match.awayTeamIndex >= 0)
+              match.id,
+        },
+      );
 
       return getTournament(tournamentId);
     });
@@ -473,18 +507,241 @@ class TournamentService {
     );
   }
 
+  Future<TournamentView> resetTournamentResults({
+    required String tournamentId,
+  }) {
+    return _store.writeTransaction(() async {
+      final tournaments = await _store.getTournaments();
+      final index =
+          tournaments.indexWhere((tournament) => tournament.id == tournamentId);
+      if (index == -1) {
+        throw StateError('Tournament not found');
+      }
+      final tournament = tournaments[index];
+      final tournamentTeams = (await _store.getTournamentTeams())
+          .where((team) => team.tournamentId == tournamentId)
+          .toList();
+      final tournamentMatches = await _store.getTournamentMatches();
+      final matches = await _store.getMatches();
+      final players = await _store.getPlayers();
+
+      final idsToRemove = tournamentMatches
+          .where((match) => match.tournamentId == tournamentId)
+          .map((match) => match.matchId)
+          .whereType<String>()
+          .toSet();
+
+      final filteredMatches =
+          matches.where((match) => !idsToRemove.contains(match.id)).toList();
+      final updatedTournamentMatches = tournamentMatches.map((match) {
+        if (match.tournamentId != tournamentId) return match;
+        if (match.stage == TournamentStage.finalStage &&
+            tournament.finalsEnabled) {
+          return match.copyWith(
+            matchId: null,
+            status: TournamentMatchStatus.scheduled,
+            homeTeamIndex: -1,
+            awayTeamIndex: -1,
+            homeAssignedStars: null,
+            awayAssignedStars: null,
+            homeClubId: null,
+            awayClubId: null,
+            clubAssignmentMode: ClubAssignmentMode.auto,
+          );
+        }
+        return match.copyWith(
+          matchId: null,
+          status: TournamentMatchStatus.scheduled,
+        );
+      }).toList();
+
+      final updatedTournament = tournament.copyWith(
+        status: TournamentStatus.group,
+        championTeamIndex: null,
+        updatedAt: DateTime.now(),
+      );
+      tournaments[index] = updatedTournament;
+
+      final rebuild = _matchService.rebuildRatingsAndEvents(
+        filteredMatches,
+        players,
+      );
+
+      await _store.saveMatches(filteredMatches);
+      await _store.saveRatingEvents(rebuild.events);
+      await _store.saveRatings(rebuild.ratings);
+      await _store.saveTournamentMatches(updatedTournamentMatches);
+      await _store.saveTournaments(tournaments);
+      await PlayerStatsService(_store, EloCalculator())
+          .invalidateAllStatsCache();
+      await HeadToHeadService(_store).invalidateAllH2HCache();
+      await SeasonService(_store, EloCalculator()).invalidateAllSeasonCache();
+
+      return TournamentView(
+        tournament: updatedTournament,
+        teams: tournamentTeams,
+        matches: updatedTournamentMatches
+            .where((match) => match.tournamentId == tournamentId)
+            .toList(),
+        standings: TournamentStandingsCalculator().compute(
+          teams: tournamentTeams,
+          matches: updatedTournamentMatches
+              .where((match) => match.tournamentId == tournamentId)
+              .toList(),
+          matchHistory: filteredMatches,
+        ),
+      );
+    });
+  }
+
+  Future<void> autoAssignClubs({
+    required String tournamentId,
+    bool force = false,
+    Set<String>? matchIds,
+  }) async {
+    await ClubAssignmentService(_store).assignForTournamentSchedule(
+      tournamentId: tournamentId,
+      force: force,
+      matchIds: matchIds,
+    );
+  }
+
+  Future<void> updateTournamentMatchClubAssignment({
+    required String tournamentId,
+    required String matchId,
+    required ClubAssignmentMode mode,
+    String? homeClubId,
+    String? awayClubId,
+    double? homeStars,
+    double? awayStars,
+  }) async {
+    await _store.writeTransaction(() async {
+      final matches = await _store.getTournamentMatches();
+      final index = matches.indexWhere(
+        (match) => match.id == matchId && match.tournamentId == tournamentId,
+      );
+      if (index == -1) {
+        throw StateError('Tournament match not found');
+      }
+      matches[index] = matches[index].copyWith(
+        clubAssignmentMode: mode,
+        homeClubId: homeClubId,
+        awayClubId: awayClubId,
+        homeAssignedStars: homeStars,
+        awayAssignedStars: awayStars,
+      );
+      await _store.saveTournamentMatches(matches);
+    });
+  }
+
+  Map<String, dynamic>? _buildMatchMetadata({
+    required TournamentMatch tournamentMatch,
+    required bool forfeit,
+  }) {
+    final metadata = <String, dynamic>{};
+    if (forfeit) {
+      metadata['forfeit'] = true;
+    }
+    if (tournamentMatch.homeClubId != null) {
+      metadata['homeClubId'] = tournamentMatch.homeClubId;
+    }
+    if (tournamentMatch.awayClubId != null) {
+      metadata['awayClubId'] = tournamentMatch.awayClubId;
+    }
+    if (tournamentMatch.homeAssignedStars != null) {
+      metadata['homeStars'] = tournamentMatch.homeAssignedStars;
+    }
+    if (tournamentMatch.awayAssignedStars != null) {
+      metadata['awayStars'] = tournamentMatch.awayAssignedStars;
+    }
+    if (metadata.isEmpty) {
+      return null;
+    }
+    return metadata;
+  }
+
+  Future<void> deleteTournamentIfNotStarted({
+    required String tournamentId,
+  }) {
+    return _store.writeTransaction(() async {
+      final tournaments = await _store.getTournaments();
+      final index =
+          tournaments.indexWhere((tournament) => tournament.id == tournamentId);
+      if (index == -1) {
+        throw StateError('Tournament not found');
+      }
+
+      final tournamentMatches = await _store.getTournamentMatches();
+      final relatedMatches = tournamentMatches
+          .where((match) => match.tournamentId == tournamentId)
+          .toList();
+      final hasStarted = relatedMatches.any(
+        (match) =>
+            match.status == TournamentMatchStatus.done ||
+            match.matchId != null,
+      );
+      if (hasStarted) {
+        throw StateError('Cannot delete a tournament after it has started.');
+      }
+
+      final history = await _store.getMatches();
+      final hasHistory =
+          history.any((match) => match.tournamentId == tournamentId);
+      if (hasHistory) {
+        throw StateError('Cannot delete a tournament with recorded matches.');
+      }
+
+      tournaments.removeAt(index);
+      final teams = await _store.getTournamentTeams();
+      teams.removeWhere((team) => team.tournamentId == tournamentId);
+      tournamentMatches
+          .removeWhere((match) => match.tournamentId == tournamentId);
+
+      await _store.saveTournaments(tournaments);
+      await _store.saveTournamentTeams(teams);
+      await _store.saveTournamentMatches(tournamentMatches);
+    });
+  }
+
   void _validateTournament(TournamentInput input) {
     if (input.name.trim().isEmpty) {
       throw ArgumentError('Tournament name is required');
     }
-    if (input.teams.length != 3) {
-      throw ArgumentError('Tournament requires exactly 3 teams');
+    if (input.teams.length < 2) {
+      throw ArgumentError('Tournament requires at least 2 teams');
     }
-    final expectedSize = input.mode == MatchMode.oneVOne ? 1 : 2;
     for (final team in input.teams) {
-      if (team.playerIds.length != expectedSize) {
-        throw ArgumentError('Team size does not match tournament mode');
+      if (team.playerIds.isEmpty || team.playerIds.length > 2) {
+        throw ArgumentError('Teams must have 1 or 2 players');
+      }
+      if (input.mode == MatchMode.oneVOne && team.playerIds.length != 1) {
+        throw ArgumentError('1V1 tournament requires solo teams');
       }
     }
+  }
+
+  List<TournamentMatch> _buildGroupMatches({
+    required String tournamentId,
+    required int teamCount,
+  }) {
+    final matches = <TournamentMatch>[];
+    var order = 1;
+    for (var i = 0; i < teamCount; i++) {
+      for (var j = i + 1; j < teamCount; j++) {
+        matches.add(
+          TournamentMatch(
+            id: _uuid.v4(),
+            tournamentId: tournamentId,
+            stage: TournamentStage.group,
+            homeTeamIndex: i,
+            awayTeamIndex: j,
+            scheduledOrder: order,
+            status: TournamentMatchStatus.scheduled,
+          ),
+        );
+        order += 1;
+      }
+    }
+    return matches;
   }
 }

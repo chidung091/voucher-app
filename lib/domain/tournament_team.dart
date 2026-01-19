@@ -5,13 +5,18 @@ class TournamentTeam {
     required this.teamIndex,
     required this.name,
     required this.playerIds,
-  });
+  }) {
+    if (playerIds.length < 1 || playerIds.length > 2) {
+      throw ArgumentError('TournamentTeam must have 1 or 2 players.');
+    }
+  }
 
   final String id;
   final String tournamentId;
   final int teamIndex;
   final String name;
   final List<String> playerIds;
+  int get teamSize => playerIds.length;
 
   factory TournamentTeam.fromJson(Map<String, dynamic> json) {
     return TournamentTeam(

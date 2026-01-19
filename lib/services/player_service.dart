@@ -75,13 +75,38 @@ class PlayerService {
       if (index == -1) {
         throw StateError('Player not found');
       }
+      final current = players[index];
+      final nextSkill = skillLevel ?? current.skillLevel;
+      if (nextSkill != current.skillLevel) {
+        final matches = await _store.getMatches();
+        final hasMatch = matches.any((match) {
+          return match.sideAPlayerIds.contains(id) ||
+              match.sideBPlayerIds.contains(id);
+        });
+        if (hasMatch) {
+          throw StateError('Skill level is locked after the first match.');
+        }
+      }
       final updated = players[index].copyWith(
         displayName: trimmed,
-        skillLevel: skillLevel ?? players[index].skillLevel,
+        skillLevel: nextSkill,
         updatedAt: DateTime.now(),
       );
       players[index] = updated;
       await _store.savePlayers(players);
+      if (nextSkill != current.skillLevel) {
+        final ratings = await _store.getRatings();
+        ratings[id] = PlayerRating(
+          playerId: id,
+          elo: EloConfig.initialEloForSkill(nextSkill),
+          gamesPlayed: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          updatedAt: DateTime.now(),
+        );
+        await _store.saveRatings(ratings);
+      }
       return updated;
     });
   }

@@ -36,8 +36,21 @@ class TournamentStandingsCalculator {
       if (tm.matchId == null) continue;
       final match = matchHistory.firstWhere(
         (element) => element.id == tm.matchId,
-        orElse: () => throw StateError('Match not found for tournament match'),
+        orElse: () => Match(
+          id: tm.matchId!,
+          mode: MatchMode.oneVOne,
+          sideAPlayerIds: const [],
+          sideBPlayerIds: const [],
+          scoreA: 0,
+          scoreB: 0,
+          result: MatchResult.draw,
+          playedAt: DateTime.fromMillisecondsSinceEpoch(0),
+          createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+        ),
       );
+      if (match.sideAPlayerIds.isEmpty && match.sideBPlayerIds.isEmpty) {
+        continue;
+      }
 
       final home = table[tm.homeTeamIndex]!;
       final away = table[tm.awayTeamIndex]!;
@@ -102,9 +115,21 @@ class TournamentStandingsCalculator {
         }
         final match = matchHistory.firstWhere(
           (element) => element.id == tm.matchId,
-          orElse: () =>
-              throw StateError('Match not found for tournament match'),
+          orElse: () => Match(
+            id: tm.matchId!,
+            mode: MatchMode.oneVOne,
+            sideAPlayerIds: const [],
+            sideBPlayerIds: const [],
+            scoreA: 0,
+            scoreB: 0,
+            result: MatchResult.draw,
+            playedAt: DateTime.fromMillisecondsSinceEpoch(0),
+            createdAt: DateTime.fromMillisecondsSinceEpoch(0),
+          ),
         );
+        if (match.sideAPlayerIds.isEmpty && match.sideBPlayerIds.isEmpty) {
+          continue;
+        }
         if (match.result == MatchResult.draw) {
           headToHeadPoints[tm.homeTeamIndex] =
               (headToHeadPoints[tm.homeTeamIndex] ?? 0) + 1;

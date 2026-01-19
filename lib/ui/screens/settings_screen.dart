@@ -22,6 +22,33 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => context.go('/settings/data'),
           ),
         ),
+        const SizedBox(height: 8),
+        Card(
+          child: ListTile(
+            title: const Text('Clubs'),
+            subtitle: const Text('Manage club catalog and stars'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go('/clubs'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Card(
+          child: ListTile(
+            title: const Text('Head-to-Head'),
+            subtitle: const Text('Compare head-to-head stats'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go('/h2h'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Card(
+          child: ListTile(
+            title: const Text('Seasons'),
+            subtitle: const Text('Seasonal leaderboards'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.go('/seasons'),
+          ),
+        ),
       ],
     );
   }

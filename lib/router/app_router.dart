@@ -5,7 +5,11 @@ import '../features/splash/splash_screen.dart';
 import '../ui/screens/home_screen.dart';
 import '../ui/screens/leaderboard_screen.dart';
 import '../ui/screens/new_match_screen.dart';
+import '../ui/screens/clubs_screen.dart';
+import '../ui/screens/head_to_head_screen.dart';
+import '../ui/screens/player_profile_screen.dart';
 import '../ui/screens/players_screen.dart';
+import '../ui/screens/seasons_screen.dart';
 import '../ui/screens/settings_screen.dart';
 import '../ui/screens/tournament_screen.dart';
 import '../ui/screens/data_management_screen.dart';
@@ -33,6 +37,29 @@ GoRouter buildRouter(Ref ref) {
             path: '/players',
             name: 'players',
             builder: (context, state) => const PlayersScreen(),
+          ),
+          GoRoute(
+            path: '/clubs',
+            name: 'clubs',
+            builder: (context, state) => const ClubsScreen(),
+          ),
+          GoRoute(
+            path: '/h2h',
+            name: 'head-to-head',
+            builder: (context, state) => const HeadToHeadScreen(),
+          ),
+          GoRoute(
+            path: '/seasons',
+            name: 'seasons',
+            builder: (context, state) => const SeasonsScreen(),
+          ),
+          GoRoute(
+            path: '/players/:id',
+            name: 'player-profile',
+            builder: (context, state) {
+              final playerId = state.pathParameters['id']!;
+              return PlayerProfileScreen(playerId: playerId);
+            },
           ),
           GoRoute(
             path: '/matches/new',

@@ -8,6 +8,9 @@ import '../domain/enums.dart';
 import '../domain/match.dart';
 import '../domain/player_rating.dart';
 import '../domain/rating_event.dart';
+import 'head_to_head_service.dart';
+import 'player_stats_service.dart';
+import 'season_service.dart';
 
 class MatchInput {
   MatchInput({
@@ -17,11 +20,13 @@ class MatchInput {
     required this.scoreA,
     required this.scoreB,
     required this.playedAt,
+    this.ratingMode = MatchRatingMode.ranked,
+    double? eloMultiplier,
     this.idempotencyKey,
     this.tournamentId,
     this.tournamentMatchId,
     this.metadata,
-  });
+  }) : eloMultiplier = eloMultiplier ?? ratingMode.defaultMultiplier();
 
   final MatchMode mode;
   final List<String> sideAPlayerIds;
@@ -29,6 +34,8 @@ class MatchInput {
   final int scoreA;
   final int scoreB;
   final DateTime playedAt;
+  final MatchRatingMode ratingMode;
+  final double eloMultiplier;
   final String? idempotencyKey;
   final String? tournamentId;
   final String? tournamentMatchId;
@@ -39,6 +46,13 @@ class MatchResultBundle {
   MatchResultBundle({required this.match, required this.events});
 
   final Match match;
+  final List<RatingEvent> events;
+}
+
+class RatingsRebuildResult {
+  RatingsRebuildResult({required this.ratings, required this.events});
+
+  final Map<String, PlayerRating> ratings;
   final List<RatingEvent> events;
 }
 
@@ -76,6 +90,9 @@ class MatchService {
       await _store.saveMatches(matches);
       await _store.saveRatings(ratings);
       await _store.saveRatingEvents(events);
+      await _invalidateStatsCache(result.match);
+      await _invalidateH2HCache(result.match);
+      await _invalidateSeasonCache(result.match);
 
       return result;
     });
@@ -112,6 +129,8 @@ class MatchService {
       result: result,
       playedAt: input.playedAt,
       createdAt: DateTime.now(),
+      ratingMode: input.ratingMode,
+      eloMultiplier: input.eloMultiplier,
       idempotencyKey: input.idempotencyKey,
       tournamentId: input.tournamentId,
       tournamentMatchId: input.tournamentMatchId,
@@ -128,6 +147,8 @@ class MatchService {
         ratingEvents: ratingEvents,
         match: match,
         playerMap: playerMap,
+        eventTime: match.playedAt,
+        eloMultiplier: match.eloMultiplier,
       );
     } else {
       _apply2v2(
@@ -135,6 +156,8 @@ class MatchService {
         ratingEvents: ratingEvents,
         match: match,
         playerMap: playerMap,
+        eventTime: match.playedAt,
+        eloMultiplier: match.eloMultiplier,
       );
     }
 
@@ -175,8 +198,21 @@ class MatchService {
         throw ArgumentError('1V1 must have exactly 1 player per side.');
       }
     } else {
-      if (input.sideAPlayerIds.length != 2 ||
-          input.sideBPlayerIds.length != 2) {
+      final allowMixed = input.tournamentId != null;
+      final sideAOk = allowMixed
+          ? input.sideAPlayerIds.length >= 1 &&
+              input.sideAPlayerIds.length <= 2
+          : input.sideAPlayerIds.length == 2;
+      final sideBOk = allowMixed
+          ? input.sideBPlayerIds.length >= 1 &&
+              input.sideBPlayerIds.length <= 2
+          : input.sideBPlayerIds.length == 2;
+      if (!sideAOk || !sideBOk) {
+        if (allowMixed) {
+          throw ArgumentError(
+            '2V2 tournament matches must have 1 or 2 players per side.',
+          );
+        }
         throw ArgumentError('2V2 must have exactly 2 players per side.');
       }
     }
@@ -210,6 +246,8 @@ class MatchService {
     required List<RatingEvent> ratingEvents,
     required Match match,
     required Map<String, Player> playerMap,
+    required DateTime eventTime,
+    required double eloMultiplier,
   }) {
     final playerA = match.sideAPlayerIds.first;
     final playerB = match.sideBPlayerIds.first;
@@ -223,18 +261,26 @@ class MatchService {
             : 0.0;
     final actualB = 1 - actualA;
 
-    final newA = _elo.updateRating(
-      rating: ratingA.elo,
-      opponentRating: ratingB.elo,
-      actualScore: actualA,
-      gamesPlayed: ratingA.gamesPlayed,
+    final deltaA = _applyMultiplier(
+      _elo.delta(
+        rating: ratingA.elo,
+        opponentRating: ratingB.elo,
+        actualScore: actualA,
+        gamesPlayed: ratingA.gamesPlayed,
+      ),
+      eloMultiplier,
     );
-    final newB = _elo.updateRating(
-      rating: ratingB.elo,
-      opponentRating: ratingA.elo,
-      actualScore: actualB,
-      gamesPlayed: ratingB.gamesPlayed,
+    final deltaB = _applyMultiplier(
+      _elo.delta(
+        rating: ratingB.elo,
+        opponentRating: ratingA.elo,
+        actualScore: actualB,
+        gamesPlayed: ratingB.gamesPlayed,
+      ),
+      eloMultiplier,
     );
+    final newA = ratingA.elo + deltaA;
+    final newB = ratingB.elo + deltaB;
 
     final updatedA = ratingA.copyWith(
       elo: newA,
@@ -263,8 +309,8 @@ class MatchService {
         playerId: playerA,
         oldElo: ratingA.elo,
         newElo: updatedA.elo,
-        delta: updatedA.elo - ratingA.elo,
-        createdAt: DateTime.now(),
+        delta: deltaA,
+        createdAt: eventTime,
       ),
       RatingEvent(
         id: _uuid.v4(),
@@ -272,8 +318,8 @@ class MatchService {
         playerId: playerB,
         oldElo: ratingB.elo,
         newElo: updatedB.elo,
-        delta: updatedB.elo - ratingB.elo,
-        createdAt: DateTime.now(),
+        delta: deltaB,
+        createdAt: eventTime,
       ),
     ]);
   }
@@ -283,6 +329,8 @@ class MatchService {
     required List<RatingEvent> ratingEvents,
     required Match match,
     required Map<String, Player> playerMap,
+    required DateTime eventTime,
+    required double eloMultiplier,
   }) {
     final sideA = match.sideAPlayerIds;
     final sideB = match.sideBPlayerIds;
@@ -292,9 +340,11 @@ class MatchService {
         sideB.map((id) => _ensureRating(ratings, id, playerMap)).toList();
 
     final teamRatingA =
-        (ratingsA[0].elo + ratingsA[1].elo) / 2.0;
+        ratingsA.map((rating) => rating.elo).reduce((a, b) => a + b) /
+            ratingsA.length;
     final teamRatingB =
-        (ratingsB[0].elo + ratingsB[1].elo) / 2.0;
+        ratingsB.map((rating) => rating.elo).reduce((a, b) => a + b) /
+            ratingsB.length;
     final expectedA =
         _elo.expectedScoreTeam(teamRatingA.round(), teamRatingB.round());
     final actualA = match.result == MatchResult.draw
@@ -305,8 +355,9 @@ class MatchService {
     final scoreDelta = actualA - expectedA;
 
     for (final rating in ratingsA) {
-      final newRating = rating.elo +
-          (_elo.kFactor(rating.gamesPlayed) * scoreDelta).round();
+      final rawDelta = _elo.kFactor(rating.gamesPlayed) * scoreDelta;
+      final appliedDelta = _applyMultiplier(rawDelta, eloMultiplier);
+      final newRating = rating.elo + appliedDelta;
       final updated = rating.copyWith(
         elo: newRating,
         gamesPlayed: rating.gamesPlayed + 1,
@@ -323,15 +374,16 @@ class MatchService {
           playerId: rating.playerId,
           oldElo: rating.elo,
           newElo: updated.elo,
-          delta: updated.elo - rating.elo,
-          createdAt: DateTime.now(),
+          delta: appliedDelta,
+          createdAt: eventTime,
         ),
       );
     }
 
     for (final rating in ratingsB) {
-      final newRating = rating.elo +
-          (_elo.kFactor(rating.gamesPlayed) * (-scoreDelta)).round();
+      final rawDelta = _elo.kFactor(rating.gamesPlayed) * (-scoreDelta);
+      final appliedDelta = _applyMultiplier(rawDelta, eloMultiplier);
+      final newRating = rating.elo + appliedDelta;
       final updated = rating.copyWith(
         elo: newRating,
         gamesPlayed: rating.gamesPlayed + 1,
@@ -348,10 +400,73 @@ class MatchService {
           playerId: rating.playerId,
           oldElo: rating.elo,
           newElo: updated.elo,
-          delta: updated.elo - rating.elo,
-          createdAt: DateTime.now(),
+          delta: appliedDelta,
+          createdAt: eventTime,
         ),
       );
     }
+  }
+
+  RatingsRebuildResult rebuildRatingsAndEvents(
+    List<Match> matches,
+    List<Player> players,
+  ) {
+    final sorted = [...matches]
+      ..sort((a, b) {
+        final played = a.playedAt.compareTo(b.playedAt);
+        if (played != 0) return played;
+        return a.createdAt.compareTo(b.createdAt);
+      });
+    final ratings = <String, PlayerRating>{};
+    final events = <RatingEvent>[];
+    final playerMap = {for (final player in players) player.id: player};
+    for (final match in sorted) {
+      if (match.mode == MatchMode.oneVOne) {
+        _apply1v1(
+          ratings: ratings,
+          ratingEvents: events,
+          match: match,
+          playerMap: playerMap,
+          eventTime: match.playedAt,
+          eloMultiplier: match.eloMultiplier,
+        );
+      } else {
+        _apply2v2(
+          ratings: ratings,
+          ratingEvents: events,
+          match: match,
+          playerMap: playerMap,
+          eventTime: match.playedAt,
+          eloMultiplier: match.eloMultiplier,
+        );
+      }
+    }
+    return RatingsRebuildResult(ratings: ratings, events: events);
+  }
+
+  int _applyMultiplier(double delta, double multiplier) {
+    return _roundHalfAwayFromZero(delta * multiplier);
+  }
+
+  int _roundHalfAwayFromZero(double value) {
+    if (value >= 0) {
+      return (value + 0.5).floor();
+    }
+    return (value - 0.5).ceil();
+  }
+
+  Future<void> _invalidateStatsCache(Match match) async {
+    final statsService = PlayerStatsService(_store, _elo);
+    await statsService.invalidatePlayerStatsCacheForMatch(match);
+  }
+
+  Future<void> _invalidateH2HCache(Match match) async {
+    final h2hService = HeadToHeadService(_store);
+    await h2hService.invalidateH2HCacheForMatch(match);
+  }
+
+  Future<void> _invalidateSeasonCache(Match match) async {
+    final seasonService = SeasonService(_store, _elo);
+    await seasonService.invalidateSeasonCacheForMatch(match);
   }
 }
