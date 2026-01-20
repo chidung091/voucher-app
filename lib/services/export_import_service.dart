@@ -182,12 +182,11 @@ class ExportImportService {
         : SeasonConfig.fromJson(
             snapshot['seasonConfig'] as Map<String, dynamic>,
           );
-    final seasonCache =
-        (snapshot['seasonCache'] as Map<String, dynamic>? ?? {})
-            .map((key, value) => MapEntry(key, value as String));
-    final ratings = (snapshot['playerRatings'] as Map<String, dynamic>)
-        .map((key, value) =>
-            MapEntry(key, PlayerRating.fromJson(value as Map<String, dynamic>)));
+    final seasonCache = (snapshot['seasonCache'] as Map<String, dynamic>? ?? {})
+        .map((key, value) => MapEntry(key, value as String));
+    final ratings = (snapshot['playerRatings'] as Map<String, dynamic>).map(
+        (key, value) => MapEntry(
+            key, PlayerRating.fromJson(value as Map<String, dynamic>)));
 
     return ExportPayload(
       app: 'fc_tracker',
@@ -196,7 +195,8 @@ class ExportImportService {
       schemaVersion: LocalStore.schemaVersion,
       data: {
         'players': players.map((p) => p.toJson()).toList(),
-        'playerRatings': ratings.map((key, value) => MapEntry(key, value.toJson())),
+        'playerRatings':
+            ratings.map((key, value) => MapEntry(key, value.toJson())),
         'matches': matches.map((m) => m.toJson()).toList(),
         'ratingEvents': ratingEvents.map((e) => e.toJson()).toList(),
         'tournaments': tournaments.map((t) => t.toJson()).toList(),
@@ -232,7 +232,8 @@ class ExportImportService {
     data['seasonConfig'] =
         data['seasonConfig'] ?? SeasonConfig.defaults().toJson();
     data['seasonCache'] = data['seasonCache'] ?? <String, dynamic>{};
-    final meta = Map<String, dynamic>.from(data['meta'] as Map<String, dynamic>? ?? {});
+    final meta =
+        Map<String, dynamic>.from(data['meta'] as Map<String, dynamic>? ?? {});
     meta['schemaVersion'] = LocalStore.schemaVersion;
     data['meta'] = meta;
     return ExportPayload(
@@ -250,9 +251,9 @@ class ExportImportService {
     final players = (data['players'] as List<dynamic>)
         .map((item) => Player.fromJson(item as Map<String, dynamic>))
         .toList();
-    final ratings = (data['playerRatings'] as Map<String, dynamic>)
-        .map((key, value) =>
-            MapEntry(key, PlayerRating.fromJson(value as Map<String, dynamic>)));
+    final ratings = (data['playerRatings'] as Map<String, dynamic>).map((key,
+            value) =>
+        MapEntry(key, PlayerRating.fromJson(value as Map<String, dynamic>)));
     final matches = (data['matches'] as List<dynamic>)
         .map((item) => Match.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -271,8 +272,9 @@ class ExportImportService {
     final clubs = (data['clubs'] as List<dynamic>? ?? [])
         .map((item) => Club.fromJson(item as Map<String, dynamic>))
         .toList();
-    final incomingSeasonConfig =
-        SeasonConfig.fromJson(data['seasonConfig'] as Map<String, dynamic>);
+    final incomingSeasonConfig = data['seasonConfig'] != null
+        ? SeasonConfig.fromJson(data['seasonConfig'] as Map<String, dynamic>)
+        : SeasonConfig.defaults();
     final incomingSeasonCache =
         (data['seasonCache'] as Map<String, dynamic>? ?? {})
             .map((key, value) => MapEntry(key, value as String));
@@ -288,154 +290,152 @@ class ExportImportService {
     final localSeasonConfig = await _store.getSeasonConfig();
     final localSeasonCache = await _store.getSeasonCacheEntries();
 
-      final playerMap = {for (final player in localPlayers) player.id: player};
-      var addedPlayers = 0;
-      var updatedPlayers = 0;
-      for (final player in players) {
-        final existing = playerMap[player.id];
-        if (existing == null) {
-          playerMap[player.id] = player;
-          addedPlayers++;
-        } else {
-          final incomingNewer =
-              player.updatedAt.isAfter(existing.updatedAt);
-          if (incomingNewer) {
-            playerMap[player.id] = existing.copyWith(
-              displayName: player.displayName,
-              skillLevel: player.skillLevel,
-              updatedAt: player.updatedAt,
-              deletedAt: player.deletedAt ?? existing.deletedAt,
-            );
-            updatedPlayers++;
-          } else if (existing.deletedAt == null && player.deletedAt != null) {
-            playerMap[player.id] = existing.copyWith(
-              deletedAt: player.deletedAt,
-              updatedAt: existing.updatedAt,
-            );
-          }
+    final playerMap = {for (final player in localPlayers) player.id: player};
+    var addedPlayers = 0;
+    var updatedPlayers = 0;
+    for (final player in players) {
+      final existing = playerMap[player.id];
+      if (existing == null) {
+        playerMap[player.id] = player;
+        addedPlayers++;
+      } else {
+        final incomingNewer = player.updatedAt.isAfter(existing.updatedAt);
+        if (incomingNewer) {
+          playerMap[player.id] = existing.copyWith(
+            displayName: player.displayName,
+            skillLevel: player.skillLevel,
+            updatedAt: player.updatedAt,
+            deletedAt: player.deletedAt ?? existing.deletedAt,
+          );
+          updatedPlayers++;
+        } else if (existing.deletedAt == null && player.deletedAt != null) {
+          playerMap[player.id] = existing.copyWith(
+            deletedAt: player.deletedAt,
+            updatedAt: existing.updatedAt,
+          );
         }
       }
-      final mergedPlayers = playerMap.values.toList();
+    }
+    final mergedPlayers = playerMap.values.toList();
 
-      final ratingMap = {...localRatings};
-      ratings.forEach((key, value) {
-        final existing = ratingMap[key];
-        if (existing == null || value.updatedAt.isAfter(existing.updatedAt)) {
-          ratingMap[key] = value;
+    final ratingMap = {...localRatings};
+    ratings.forEach((key, value) {
+      final existing = ratingMap[key];
+      if (existing == null || value.updatedAt.isAfter(existing.updatedAt)) {
+        ratingMap[key] = value;
+      }
+    });
+
+    final matchMap = {for (final match in localMatches) match.id: match};
+    final idempotencyMap = {
+      for (final match in localMatches)
+        if (match.idempotencyKey != null) match.idempotencyKey!: match
+    };
+    var addedMatches = 0;
+    var skippedMatches = 0;
+    for (final match in matches) {
+      final existing =
+          matchMap[match.id] ?? idempotencyMap[match.idempotencyKey];
+      if (existing == null) {
+        matchMap[match.id] = match;
+        addedMatches++;
+      } else if (match.createdAt.isAfter(existing.createdAt)) {
+        matchMap[match.id] = match;
+      } else {
+        skippedMatches++;
+      }
+    }
+
+    final eventMap = {
+      for (final event in localEvents)
+        '${event.matchId}-${event.playerId}': event
+    };
+    for (final event in ratingEvents) {
+      eventMap['${event.matchId}-${event.playerId}'] = event;
+    }
+
+    final tournamentMap = {
+      for (final tournament in localTournaments) tournament.id: tournament
+    };
+    for (final tournament in tournaments) {
+      final existing = tournamentMap[tournament.id];
+      if (existing == null ||
+          tournament.updatedAt.isAfter(existing.updatedAt)) {
+        tournamentMap[tournament.id] = tournament;
+      }
+    }
+
+    final teamMap = {
+      for (final team in localTeams)
+        '${team.tournamentId}-${team.teamIndex}': team
+    };
+    for (final team in tournamentTeams) {
+      teamMap['${team.tournamentId}-${team.teamIndex}'] = team;
+    }
+
+    final tournamentMatchMap = {
+      for (final match in localMatchesMeta) match.id: match
+    };
+    for (final match in tournamentMatches) {
+      tournamentMatchMap[match.id] = match;
+    }
+
+    final clubMap = {for (final club in localClubs) club.id: club};
+    for (final club in clubs) {
+      final existing = clubMap[club.id];
+      if (existing == null || club.updatedAt.isAfter(existing.updatedAt)) {
+        clubMap[club.id] = club;
+      }
+    }
+
+    final selectedSeasonConfig = localSeasonConfig == null ||
+            incomingSeasonConfig.updatedAt.isAfter(localSeasonConfig.updatedAt)
+        ? incomingSeasonConfig
+        : localSeasonConfig;
+    final mergedSeasonCache = {...localSeasonCache, ...incomingSeasonCache};
+
+    final updatedMatches = matchMap.values.toList();
+    final updatedEvents = eventMap.values.toList();
+
+    final localMeta = await _store.getMeta();
+    final incomingMeta = Map<String, dynamic>.from(
+      data['meta'] as Map<String, dynamic>? ?? {},
+    );
+    final metaUpdated = _pickLatestMeta(localMeta, incomingMeta);
+
+    final playerIds = mergedPlayers.map((p) => p.id).toSet();
+    for (final match in updatedMatches) {
+      for (final pid in [
+        ...match.sideAPlayerIds,
+        ...match.sideBPlayerIds,
+      ]) {
+        if (!playerIds.contains(pid)) {
+          mergedPlayers.add(
+            Player(
+              id: pid,
+              displayName: 'Unknown',
+              skillLevel: 2,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+          playerIds.add(pid);
+          errors.add('Placeholder created for missing player $pid.');
         }
-      });
-
-      final matchMap = {for (final match in localMatches) match.id: match};
-      final idempotencyMap = {
-        for (final match in localMatches)
-          if (match.idempotencyKey != null) match.idempotencyKey!: match
-      };
-      var addedMatches = 0;
-      var skippedMatches = 0;
-      for (final match in matches) {
-        final existing =
-            matchMap[match.id] ?? idempotencyMap[match.idempotencyKey];
-        if (existing == null) {
-          matchMap[match.id] = match;
-          addedMatches++;
-        } else if (match.createdAt.isAfter(existing.createdAt)) {
-          matchMap[match.id] = match;
-        } else {
-          skippedMatches++;
-        }
       }
+    }
 
-      final eventMap = {
-        for (final event in localEvents)
-          '${event.matchId}-${event.playerId}': event
-      };
-      for (final event in ratingEvents) {
-        eventMap['${event.matchId}-${event.playerId}'] = event;
-      }
-
-      final tournamentMap = {
-        for (final tournament in localTournaments) tournament.id: tournament
-      };
-      for (final tournament in tournaments) {
-        final existing = tournamentMap[tournament.id];
-        if (existing == null ||
-            tournament.updatedAt.isAfter(existing.updatedAt)) {
-          tournamentMap[tournament.id] = tournament;
-        }
-      }
-
-      final teamMap = {
-        for (final team in localTeams)
-          '${team.tournamentId}-${team.teamIndex}': team
-      };
-      for (final team in tournamentTeams) {
-        teamMap['${team.tournamentId}-${team.teamIndex}'] = team;
-      }
-
-      final tournamentMatchMap = {
-        for (final match in localMatchesMeta) match.id: match
-      };
-      for (final match in tournamentMatches) {
-        tournamentMatchMap[match.id] = match;
-      }
-
-      final clubMap = {for (final club in localClubs) club.id: club};
-      for (final club in clubs) {
-        final existing = clubMap[club.id];
-        if (existing == null || club.updatedAt.isAfter(existing.updatedAt)) {
-          clubMap[club.id] = club;
-        }
-      }
-
-      final selectedSeasonConfig = localSeasonConfig == null ||
-              incomingSeasonConfig.updatedAt
-                  .isAfter(localSeasonConfig.updatedAt)
-          ? incomingSeasonConfig
-          : localSeasonConfig;
-      final mergedSeasonCache = {...localSeasonCache, ...incomingSeasonCache};
-
-      final updatedMatches = matchMap.values.toList();
-      final updatedEvents = eventMap.values.toList();
-
-      final localMeta = await _store.getMeta();
-      final incomingMeta = Map<String, dynamic>.from(
-        data['meta'] as Map<String, dynamic>? ?? {},
-      );
-      final metaUpdated = _pickLatestMeta(localMeta, incomingMeta);
-
-      final playerIds = mergedPlayers.map((p) => p.id).toSet();
-      for (final match in updatedMatches) {
-        for (final pid in [
-          ...match.sideAPlayerIds,
-          ...match.sideBPlayerIds,
-        ]) {
-          if (!playerIds.contains(pid)) {
-            mergedPlayers.add(
-              Player(
-                id: pid,
-                displayName: 'Unknown',
-                skillLevel: 2,
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
-              ),
-            );
-            playerIds.add(pid);
-            errors.add('Placeholder created for missing player $pid.');
-          }
-        }
-      }
-
-      await _store.savePlayers(mergedPlayers);
-      await _store.saveRatings(ratingMap);
-      await _store.saveMatches(updatedMatches);
-      await _store.saveRatingEvents(updatedEvents);
-      await _store.saveTournaments(tournamentMap.values.toList());
-      await _store.saveTournamentTeams(teamMap.values.toList());
-      await _store.saveTournamentMatches(tournamentMatchMap.values.toList());
-      await _store.saveClubs(clubMap.values.toList());
-      await _store.saveSeasonConfig(selectedSeasonConfig);
-      await _store.saveSeasonCacheEntries(mergedSeasonCache);
-      await _store.saveMeta(metaUpdated);
+    await _store.savePlayers(mergedPlayers);
+    await _store.saveRatings(ratingMap);
+    await _store.saveMatches(updatedMatches);
+    await _store.saveRatingEvents(updatedEvents);
+    await _store.saveTournaments(tournamentMap.values.toList());
+    await _store.saveTournamentTeams(teamMap.values.toList());
+    await _store.saveTournamentMatches(tournamentMatchMap.values.toList());
+    await _store.saveClubs(clubMap.values.toList());
+    await _store.saveSeasonConfig(selectedSeasonConfig);
+    await _store.saveSeasonCacheEntries(mergedSeasonCache);
+    await _store.saveMeta(metaUpdated);
 
     return ImportReport(
       addedPlayers: addedPlayers,

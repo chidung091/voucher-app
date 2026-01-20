@@ -37,18 +37,32 @@ class ClubAssignmentService {
     required int teamCount,
     required int teamSizeStrong,
     required int teamSizeWeak,
+    int? eloDiff,
   }) {
     final strongBase = baseStars(rank: rankStrong, teamCount: teamCount);
     final weakBase = baseStars(rank: rankWeak, teamCount: teamCount);
     final baseline = roundToStep((strongBase + weakBase) / 2, step);
     final strongHandicap =
-        (teamSizeStrong == 1 && teamSizeWeak == 2) ? step : 0.0;
-    final weakHandicap =
-        (teamSizeWeak == 1 && teamSizeStrong == 2) ? step : 0.0;
-    final strong =
-        (baseline - step + strongHandicap).clamp(1.0, maxStar).toDouble();
-    final weak =
-        (baseline + step + weakHandicap).clamp(1.0, maxStar).toDouble();
+        (teamSizeStrong == 1 && teamSizeWeak == 2) ? 0.5 : 0.0;
+    final weakHandicap = (teamSizeWeak == 1 && teamSizeStrong == 2) ? 0.5 : 0.0;
+
+    // Dynamic spread based on Elo difference
+    // If undefined or small (< 60), use 0.25 (total 0.5 gap).
+    // If larger, scale up: ~100 elo -> 0.5 spread (total 1.0 gap).
+    double spread = 0.25;
+    if (eloDiff != null) {
+      // 1 full star gap (0.5 spread) per 100 elo
+      final calculated = (eloDiff.abs() / 200.0);
+      // Ensure at least 0.25 spread (0.5 gap) to differentiate ranks
+      spread = max(0.25, calculated);
+    }
+
+    final strongRaw = baseline - spread + strongHandicap;
+    final weakRaw = baseline + spread + weakHandicap;
+
+    final strong = roundToStep(strongRaw, step).clamp(1.0, maxStar).toDouble();
+    final weak = roundToStep(weakRaw, step).clamp(1.0, maxStar).toDouble();
+
     return MatchupStars(strongStars: strong, weakStars: weak);
   }
 
@@ -56,14 +70,14 @@ class ClubAssignmentService {
     required double requiredStars,
     required List<Club> clubs,
     String? excludeId,
+    Random? random,
   }) {
     if (clubs.isEmpty) return null;
     final active = clubs.where((club) => club.deletedAt == null).toList();
     if (active.isEmpty) return null;
 
-    List<Club> candidates = active
-        .where((club) => club.stars == requiredStars)
-        .toList();
+    List<Club> candidates =
+        active.where((club) => club.stars == requiredStars).toList();
     if (candidates.isEmpty) {
       candidates = active
           .where((club) => (club.stars - requiredStars).abs() <= step)
@@ -72,10 +86,15 @@ class ClubAssignmentService {
     if (candidates.isEmpty) {
       candidates = List<Club>.from(active);
     }
+    // Sort for stability before shuffle, ensuring consistent behavior with seeded random
     candidates.sort((a, b) => a.id.compareTo(b.id));
 
+    // Shuffle to pick a random club among candidates
+    candidates.shuffle(random);
+
     if (excludeId != null && candidates.length > 1) {
-      final filtered = candidates.where((club) => club.id != excludeId).toList();
+      final filtered =
+          candidates.where((club) => club.id != excludeId).toList();
       if (filtered.isNotEmpty) {
         return filtered.first;
       }
@@ -97,9 +116,8 @@ class ClubAssignmentService {
         .where((team) => team.tournamentId == tournamentId)
         .toList();
     final matches = await _store.getTournamentMatches();
-    final tournamentMatches = matches
-        .where((match) => match.tournamentId == tournamentId)
-        .toList();
+    final tournamentMatches =
+        matches.where((match) => match.tournamentId == tournamentId).toList();
 
     if (teams.isEmpty || tournamentMatches.isEmpty) {
       return;
@@ -117,6 +135,7 @@ class ClubAssignmentService {
     );
     final ranks = teamEloCalculator.computeTeamRanks(teamSnapshots);
     final teamCount = teams.length;
+    final random = Random();
 
     var updated = false;
     for (final match in tournamentMatches) {
@@ -150,6 +169,10 @@ class ClubAssignmentService {
       final strongIsHome = homeRank < awayRank ||
           (homeRank == awayRank &&
               homeSnapshot.effectiveElo >= awaySnapshot.effectiveElo);
+
+      final eloDiff =
+          (homeSnapshot.effectiveElo - awaySnapshot.effectiveElo).abs().round();
+
       final stars = matchupStars(
         rankStrong: min(homeRank, awayRank),
         rankWeak: max(homeRank, awayRank),
@@ -158,6 +181,7 @@ class ClubAssignmentService {
             strongIsHome ? homeSnapshot.teamSize : awaySnapshot.teamSize,
         teamSizeWeak:
             strongIsHome ? awaySnapshot.teamSize : homeSnapshot.teamSize,
+        eloDiff: eloDiff,
       );
       final homeStars = strongIsHome ? stars.strongStars : stars.weakStars;
       final awayStars = strongIsHome ? stars.weakStars : stars.strongStars;
@@ -165,11 +189,13 @@ class ClubAssignmentService {
       final homeClub = pickClubForStars(
         requiredStars: homeStars,
         clubs: clubs,
+        random: random,
       );
       final awayClub = pickClubForStars(
         requiredStars: awayStars,
         clubs: clubs,
         excludeId: homeClub?.id,
+        random: random,
       );
 
       final updatedMatch = match.copyWith(
@@ -190,5 +216,4 @@ class ClubAssignmentService {
       await _store.saveTournamentMatches(matches);
     }
   }
-
 }
