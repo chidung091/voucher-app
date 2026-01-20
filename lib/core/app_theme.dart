@@ -129,7 +129,17 @@ class AppTheme {
         ),
         clipBehavior: Clip.antiAlias,
       ),
-      // Keep divider theme for consistency if desired, or remove for full M3 default
+      // Custom Navigation Bar Theme
+      navigationBarTheme: NavigationBarThemeData(
+        height: 88, // Increased height for wrapped text
+        labelTextStyle: MaterialStateProperty.all(
+          const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: _surfaceColor,
+        indicatorColor: _secondaryColor.withOpacity(0.5),
+        iconTheme: MaterialStateProperty.all(
+            const IconThemeData(color: Colors.black87)),
+      ),
       dividerTheme: const DividerThemeData(
         thickness: 1,
       ),

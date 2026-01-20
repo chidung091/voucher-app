@@ -122,6 +122,7 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
   bool _finalsEnabled = true;
   Map<String, int> _ratings = {};
   String? _error;
+  String? _forceSoloPlayerId;
 
   Future<void> _create() async {
     final service = await TournamentService.create();
@@ -132,6 +133,7 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
           mode: _mode,
           playerIdsPool: _pool.toList(),
           finalsEnabled: _finalsEnabled,
+          forceSoloPlayerId: _forceSoloPlayerId,
         );
       } else {
         final teamInputs = _randomizeTeamsFromPool();
@@ -174,6 +176,21 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
     }
     final random = Random();
     poolPlayers.shuffle(random);
+
+    // If we have a forced solo player in 2v2 odd scenario, ensure they are last (solo)
+    // The current logic creates teams of 2 then the last one is solo.
+    if (_mode == MatchMode.twoVTwo &&
+        poolPlayers.length.isOdd &&
+        _forceSoloPlayerId != null) {
+      final soloIndex =
+          poolPlayers.indexWhere((p) => p.id == _forceSoloPlayerId);
+      if (soloIndex != -1) {
+        final solo = poolPlayers.removeAt(soloIndex);
+        poolPlayers
+            .add(solo); // Move to end to be picked as the last team (solo)
+      }
+    }
+
     final teams = <TournamentTeamInput>[];
     if (_mode == MatchMode.oneVOne) {
       for (var i = 0; i < poolPlayers.length; i++) {
@@ -234,11 +251,18 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
       try {
         preview = _mode == MatchMode.oneVOne
             ? TeamBalancer().balanceFor1v1(entries)
-            : TeamBalancer().balanceFor2v2(entries);
+            : TeamBalancer().balanceFor2v2(
+                entries,
+                forceSoloPlayerId: _forceSoloPlayerId,
+              );
       } catch (error) {
         poolError = error.toString();
       }
     }
+
+    final showSoloPicker =
+        _mode == MatchMode.twoVTwo && poolPlayers.length.isOdd;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Create Tournament')),
       body: ListView(
@@ -265,7 +289,10 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
             ],
             onChanged: (value) {
               if (value == null) return;
-              setState(() => _mode = value);
+              setState(() {
+                _mode = value;
+                if (!showSoloPicker) _forceSoloPlayerId = null;
+              });
             },
             decoration: const InputDecoration(
               labelText: 'Mode',
@@ -303,12 +330,39 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
                         _pool.add(player.id);
                       } else {
                         _pool.remove(player.id);
+                        if (_forceSoloPlayerId == player.id) {
+                          _forceSoloPlayerId = null;
+                        }
                       }
                     });
                   },
                 ),
             ],
           ),
+          if (showSoloPicker) ...[
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _forceSoloPlayerId,
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('Auto-detect Solo Player'),
+                ),
+                ...poolPlayers.map(
+                  (p) => DropdownMenuItem(
+                    value: p.id,
+                    child: Text('Solo: ${p.displayName}'),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() => _forceSoloPlayerId = value);
+              },
+              decoration: const InputDecoration(
+                labelText: 'Designate Solo Player (Optional)',
+              ),
+            ),
+          ],
           if (poolError != null) ...[
             const SizedBox(height: 8),
             Text(poolError, style: const TextStyle(color: Colors.red)),

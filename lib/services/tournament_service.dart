@@ -136,6 +136,7 @@ class TournamentService {
     required MatchMode mode,
     required List<String> playerIdsPool,
     bool finalsEnabled = true,
+    String? forceSoloPlayerId,
   }) async {
     if (playerIdsPool.isEmpty) {
       throw ArgumentError('Player pool is required.');
@@ -148,7 +149,7 @@ class TournamentService {
     final balancer = TeamBalancer();
     final result = mode == MatchMode.oneVOne
         ? balancer.balanceFor1v1(entries)
-        : balancer.balanceFor2v2(entries);
+        : balancer.balanceFor2v2(entries, forceSoloPlayerId: forceSoloPlayerId);
 
     final teams = List.generate(result.teams.length, (index) {
       final members =

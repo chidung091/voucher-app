@@ -23,17 +23,33 @@ class TeamBalancer {
     }
     final sorted = [...pool]..sort(_byId);
     return TeamBalanceResult(
-      teams: [for (final entry in sorted) [entry]],
+      teams: [
+        for (final entry in sorted) [entry]
+      ],
       teamTotals: [for (final entry in sorted) entry.elo],
     );
   }
 
-  TeamBalanceResult balanceFor2v2(List<PlayerEloEntry> pool) {
+  TeamBalanceResult balanceFor2v2(
+    List<PlayerEloEntry> pool, {
+    String? forceSoloPlayerId,
+  }) {
     if (pool.length < 3) {
       throw ArgumentError('Need at least 3 players for team tournament.');
     }
     final sorted = [...pool]..sort(_byId);
     if (sorted.length.isOdd) {
+      if (forceSoloPlayerId != null) {
+        final soloIndex =
+            sorted.indexWhere((e) => e.player.id == forceSoloPlayerId);
+        if (soloIndex != -1) {
+          final solo = sorted[soloIndex];
+          final remaining = [...sorted]..removeAt(soloIndex);
+          final pairing = _bestPairing(remaining);
+          return _buildResult(pairing, solo);
+        }
+      }
+
       final mixed = _bestMixedPairing(sorted);
       return _buildResult(mixed.teams, mixed.solo);
     }
@@ -87,7 +103,6 @@ class TeamBalancer {
     return best!;
   }
 
-
   List<List<PlayerEloEntry>> _bestPairing(List<PlayerEloEntry> players) {
     final pairings = <List<List<PlayerEloEntry>>>[];
     final used = List<bool>.filled(players.length, false);
@@ -133,13 +148,10 @@ class TeamBalancer {
   }
 
   int _pairingScore(List<List<PlayerEloEntry>> pairing) {
-    final totals = pairing
-        .map((pair) => pair[0].elo + pair[1].elo)
-        .toList()
+    final totals = pairing.map((pair) => pair[0].elo + pair[1].elo).toList()
       ..sort();
     return totals.last - totals.first;
   }
-
 
   double _variance(List<List<PlayerEloEntry>> pairing) {
     final totals = pairing.map((pair) => pair[0].elo + pair[1].elo).toList();
@@ -189,7 +201,6 @@ class TeamBalancer {
     return ids.join('-');
   }
 
-
   int _byId(PlayerEloEntry a, PlayerEloEntry b) {
     return a.player.id.compareTo(b.player.id);
   }
@@ -198,14 +209,12 @@ class TeamBalancer {
     List<Player> players,
     Map<String, PlayerRating> ratings,
   ) {
-    return players
-        .map((player) {
-          final rating = ratings[player.id];
-          final elo = rating?.elo ??
-              EloConfig.initialEloForSkill(player.skillLevel);
-          return PlayerEloEntry(player: player, elo: elo);
-        })
-        .toList();
+    return players.map((player) {
+      final rating = ratings[player.id];
+      final elo =
+          rating?.elo ?? EloConfig.initialEloForSkill(player.skillLevel);
+      return PlayerEloEntry(player: player, elo: elo);
+    }).toList();
   }
 }
 
