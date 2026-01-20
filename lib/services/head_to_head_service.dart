@@ -118,7 +118,8 @@ class HeadToHeadService {
     final side2 = [key.ids[2], key.ids[3]];
     return matches.where((match) {
       if (match.mode != MatchMode.twoVTwo) return false;
-      if (match.sideAPlayerIds.length != 2 || match.sideBPlayerIds.length != 2) {
+      if (match.sideAPlayerIds.length != 2 ||
+          match.sideBPlayerIds.length != 2) {
         return false;
       }
       final sideA = [...match.sideAPlayerIds]..sort();
@@ -193,6 +194,7 @@ class HeadToHeadService {
           scoreSide1: scoreSide1,
           scoreSide2: scoreSide2,
           resultForSide1: result,
+          ratingMode: match.ratingMode,
           tournamentId: match.tournamentId,
         ),
       );

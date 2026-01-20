@@ -200,12 +200,10 @@ class MatchService {
     } else {
       final allowMixed = input.tournamentId != null;
       final sideAOk = allowMixed
-          ? input.sideAPlayerIds.length >= 1 &&
-              input.sideAPlayerIds.length <= 2
+          ? input.sideAPlayerIds.length >= 1 && input.sideAPlayerIds.length <= 2
           : input.sideAPlayerIds.length == 2;
       final sideBOk = allowMixed
-          ? input.sideBPlayerIds.length >= 1 &&
-              input.sideBPlayerIds.length <= 2
+          ? input.sideBPlayerIds.length >= 1 && input.sideBPlayerIds.length <= 2
           : input.sideBPlayerIds.length == 2;
       if (!sideAOk || !sideBOk) {
         if (allowMixed) {
@@ -411,8 +409,7 @@ class MatchService {
     List<Match> matches,
     List<Player> players,
   ) {
-    final sorted = [...matches]
-      ..sort((a, b) {
+    final sorted = [...matches]..sort((a, b) {
         final played = a.playedAt.compareTo(b.playedAt);
         if (played != 0) return played;
         return a.createdAt.compareTo(b.createdAt);
@@ -468,5 +465,28 @@ class MatchService {
   Future<void> _invalidateSeasonCache(Match match) async {
     final seasonService = SeasonService(_store, _elo);
     await seasonService.invalidateSeasonCacheForMatch(match);
+  }
+
+  Future<void> deleteMatch(String matchId) {
+    return _store.writeTransaction(() async {
+      final matches = await _store.getMatches();
+      final matchToDelete = matches.firstWhere(
+        (m) => m.id == matchId,
+        orElse: () => throw ArgumentError('Match $matchId not found'),
+      );
+
+      matches.removeWhere((m) => m.id == matchId);
+      final players = await _store.getPlayers();
+
+      final rebuildResult = rebuildRatingsAndEvents(matches, players);
+
+      await _store.saveMatches(matches);
+      await _store.saveRatings(rebuildResult.ratings);
+      await _store.saveRatingEvents(rebuildResult.events);
+
+      await _invalidateStatsCache(matchToDelete);
+      await _invalidateH2HCache(matchToDelete);
+      await _invalidateSeasonCache(matchToDelete);
+    });
   }
 }

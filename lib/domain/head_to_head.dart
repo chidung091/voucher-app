@@ -57,6 +57,7 @@ class HeadToHeadMatchSummary {
     required this.scoreSide1,
     required this.scoreSide2,
     required this.resultForSide1,
+    required this.ratingMode,
     required this.tournamentId,
   });
 
@@ -65,6 +66,7 @@ class HeadToHeadMatchSummary {
   final int scoreSide1;
   final int scoreSide2;
   final String resultForSide1;
+  final MatchRatingMode ratingMode;
   final String? tournamentId;
 
   Map<String, dynamic> toJson() {
@@ -74,6 +76,7 @@ class HeadToHeadMatchSummary {
       'scoreSide1': scoreSide1,
       'scoreSide2': scoreSide2,
       'resultForSide1': resultForSide1,
+      'ratingMode': ratingMode.toJson(),
       'tournamentId': tournamentId,
     };
   }
@@ -85,6 +88,9 @@ class HeadToHeadMatchSummary {
       scoreSide1: json['scoreSide1'] as int,
       scoreSide2: json['scoreSide2'] as int,
       resultForSide1: json['resultForSide1'] as String,
+      ratingMode: json.containsKey('ratingMode')
+          ? MatchRatingModeJson.fromJson(json['ratingMode'] as String)
+          : MatchRatingMode.ranked,
       tournamentId: json['tournamentId'] as String?,
     );
   }

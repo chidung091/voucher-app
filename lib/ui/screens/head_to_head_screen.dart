@@ -5,6 +5,7 @@ import '../../domain/enums.dart';
 import '../../domain/head_to_head.dart';
 import '../../domain/player.dart';
 import '../../services/head_to_head_service.dart';
+import '../../services/match_service.dart';
 import '../../services/player_service.dart';
 
 class HeadToHeadScreen extends StatefulWidget {
@@ -322,7 +323,9 @@ class _HeadToHeadScreenState extends State<HeadToHeadScreen> {
             ),
             const SizedBox(height: 8),
             ...stats.recentMatches.map((summary) {
-              final dateText = DateFormat('MMM d, yyyy').format(summary.playedAt);
+              final dateText =
+                  DateFormat('MMM d, yyyy').format(summary.playedAt);
+              final isFriendly = summary.ratingMode == MatchRatingMode.friendly;
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
@@ -330,9 +333,18 @@ class _HeadToHeadScreenState extends State<HeadToHeadScreen> {
                     '$side1Label ${summary.scoreSide1} - ${summary.scoreSide2} $side2Label',
                   ),
                   subtitle: Text(dateText),
-                  trailing: summary.tournamentId == null
-                      ? null
-                      : const Chip(label: Text('Tournament')),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (summary.tournamentId != null)
+                        const Chip(label: Text('Tournament')),
+                      if (isFriendly)
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => _confirmDelete(summary.matchId),
+                        ),
+                    ],
+                  ),
                 ),
               );
             }),
@@ -354,6 +366,50 @@ class _HeadToHeadScreenState extends State<HeadToHeadScreen> {
     );
     final suffix = player.deletedAt == null ? '' : ' (deleted)';
     return '${player.displayName}$suffix';
+  }
+
+  Future<void> _confirmDelete(String matchId) async {
+    // simplified:
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Match'),
+        content: const Text(
+          'Are you sure you want to delete this match? This will recalculate Elo ratings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        final matchService = await MatchService.create();
+        await matchService.deleteMatch(matchId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Match deleted')),
+          );
+          _refresh1v1();
+          _refresh2v2();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e')),
+          );
+        }
+      }
+    }
   }
 
   String _sideLabel(List<String> ids) {

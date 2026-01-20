@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../features/splash/splash_screen.dart';
 import '../ui/screens/home_screen.dart';
 import '../ui/screens/leaderboard_screen.dart';
+import '../ui/screens/more_screen.dart';
 import '../ui/screens/new_match_screen.dart';
 import '../ui/screens/clubs_screen.dart';
 import '../ui/screens/head_to_head_screen.dart';
@@ -85,6 +86,11 @@ GoRouter buildRouter(Ref ref) {
             path: '/settings/data',
             name: 'data-management',
             builder: (context, state) => const DataManagementScreen(),
+          ),
+          GoRoute(
+            path: '/more',
+            name: 'more',
+            builder: (context, state) => const MoreScreen(),
           ),
         ],
       ),
