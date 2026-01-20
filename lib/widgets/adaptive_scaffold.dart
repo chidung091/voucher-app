@@ -146,13 +146,13 @@ class AdaptiveScaffold extends StatelessWidget {
           : child,
       bottomNavigationBar: isTablet
           ? null
-          : BottomNavigationBar(
-              currentIndex: selectedIndex,
-              onTap: (index) => context.go(activeItems[index].route),
-              type: BottomNavigationBarType.fixed,
-              items: [
+          : NavigationBar(
+              selectedIndex: selectedIndex,
+              onDestinationSelected: (index) =>
+                  context.go(activeItems[index].route),
+              destinations: [
                 for (final item in activeItems)
-                  BottomNavigationBarItem(
+                  NavigationDestination(
                     icon: Icon(item.icon),
                     label: item.label,
                   ),

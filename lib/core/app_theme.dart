@@ -1,89 +1,137 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const _seedColor = Color(0xFFF38A21);
-  static const _secondaryColor = Color(0xFF1EAF5E);
+  static const _primaryColor = Color(0xFFF075AE); // Pink
+  static const _secondaryColor = Color(0xFF9BC264); // Green
+  static const _tertiaryColor = Color(0xFFF7DB91); // Yellow
+  static const _surfaceColor = Color(0xFFFFFDCE); // Cream
 
   static ThemeData get lightTheme {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: _seedColor,
+      seedColor: _primaryColor,
       brightness: Brightness.light,
     ).copyWith(
-      surface: Colors.white,
-      background: Colors.white,
+      primary: _primaryColor,
       secondary: _secondaryColor,
+      tertiary: _tertiaryColor,
+      surface: _surfaceColor,
+      // background is deprecated in Flutter 3.22+, mapped to surface often, but let's set it if needed or rely on surface.
+      // surfaceTint: Colors.white, // Optional: if cream is too strong on appbar scroll
     );
 
     return ThemeData(
       colorScheme: colorScheme,
       useMaterial3: true,
-      scaffoldBackgroundColor: Colors.white,
+      // Custom App Bar "Detached"
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        centerTitle: true,
+        titleSpacing: 16,
+        backgroundColor: _surfaceColor,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(24))),
+        scrolledUnderElevation: 4,
+        shadowColor: Colors.black12,
+      ),
+      // Custom FAB "Sticker Pop"
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: _tertiaryColor,
+        foregroundColor: Colors.black87,
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        largeSizeConstraints:
+            const BoxConstraints.tightFor(width: 96, height: 96),
+      ),
+      // Custom Dialog "Soft Card"
+      dialogTheme: DialogTheme(
+        backgroundColor: _surfaceColor,
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        titleTextStyle: const TextStyle(
+            fontSize: 24, fontWeight: FontWeight.bold, color: _primaryColor),
+      ),
+      // Custom Chips "Soft Rect"
+      chipTheme: ChipThemeData(
+        backgroundColor: _surfaceColor,
+        selectedColor: _secondaryColor,
+        secondarySelectedColor: _secondaryColor,
+        labelStyle: const TextStyle(color: Colors.black87),
+        secondaryLabelStyle: const TextStyle(color: Colors.white),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide.none,
+        ),
         elevation: 0,
-        centerTitle: false,
-        titleSpacing: 0,
-        titleTextStyle: TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.w600,
-          color: Colors.black,
+        pressElevation: 2,
+      ),
+      // Custom Tab Bar "Pill"
+      tabBarTheme: TabBarTheme(
+        indicator: BoxDecoration(
+          color: _primaryColor,
+          borderRadius: BorderRadius.circular(50),
+        ),
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.black54,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent, // Remove underline
+      ),
+      // Custom Dropdown Menu (M3) "Soft Pop"
+      dropdownMenuTheme: DropdownMenuThemeData(
+        menuStyle: MenuStyle(
+          backgroundColor: MaterialStateProperty.all(_surfaceColor),
+          surfaceTintColor: MaterialStateProperty.all(Colors.transparent),
+          shape: MaterialStateProperty.all(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          elevation: MaterialStateProperty.all(4),
         ),
       ),
-      cardTheme: const CardTheme(
+      // Custom Input Decoration "Soft Pop"
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.7),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: _secondaryColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide:
+              BorderSide(color: _secondaryColor.withOpacity(0.5), width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: _primaryColor, width: 2.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.error, width: 1.5),
+        ),
+      ),
+      // Custom Button Styling
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          elevation: 2,
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+      ),
+      // Custom Card Styling
+      cardTheme: CardTheme(
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(16)),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: _primaryColor.withOpacity(0.1), width: 1),
         ),
+        clipBehavior: Clip.antiAlias,
       ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          shape: const StadiumBorder(),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-      ),
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-        ),
-      ),
+      // Keep divider theme for consistency if desired, or remove for full M3 default
       dividerTheme: const DividerThemeData(
-        color: Color(0xFFE6E6E6),
         thickness: 1,
-      ),
-      listTileTheme: const ListTileThemeData(
-        iconColor: Colors.black87,
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: Colors.white,
-        indicatorColor: colorScheme.primary.withOpacity(0.14),
-        labelTextStyle: MaterialStateProperty.all(
-          const TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ),
-      bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: Colors.white,
-        selectedItemColor: colorScheme.primary,
-        unselectedItemColor: Colors.black54,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-      ),
-      navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: Colors.white,
-        selectedIconTheme: IconThemeData(color: colorScheme.primary),
-        unselectedIconTheme: const IconThemeData(color: Colors.black54),
-        selectedLabelTextStyle: TextStyle(
-          color: colorScheme.primary,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelTextStyle: const TextStyle(
-          color: Colors.black54,
-          fontWeight: FontWeight.w500,
-        ),
       ),
     );
   }
@@ -91,7 +139,7 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(
-        seedColor: _seedColor,
+        seedColor: _primaryColor,
         brightness: Brightness.dark,
       ),
       useMaterial3: true,

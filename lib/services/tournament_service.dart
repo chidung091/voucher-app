@@ -142,9 +142,8 @@ class TournamentService {
     }
     final players = await _store.getPlayers();
     final ratings = await _store.getRatings();
-    final pool = players
-        .where((player) => playerIdsPool.contains(player.id))
-        .toList();
+    final pool =
+        players.where((player) => playerIdsPool.contains(player.id)).toList();
     final entries = TeamBalancer.buildPool(pool, ratings);
     final balancer = TeamBalancer();
     final result = mode == MatchMode.oneVOne
@@ -222,9 +221,8 @@ class TournamentService {
       final tournament = tournaments[tournamentIndex];
 
       final teams = await _store.getTournamentTeams();
-      final tournamentTeams = teams
-          .where((team) => team.tournamentId == tournamentId)
-          .toList();
+      final tournamentTeams =
+          teams.where((team) => team.tournamentId == tournamentId).toList();
       final matches = await _store.getTournamentMatches();
       final matchIndex =
           matches.indexWhere((item) => item.id == tournamentMatchId);
@@ -438,9 +436,8 @@ class TournamentService {
       if (groupMatchesDone == groupMatchesTotal) {
         final standings = TournamentStandingsCalculator().compute(
           teams: teams,
-          matches: matches
-              .where((m) => m.tournamentId == tournamentId)
-              .toList(),
+          matches:
+              matches.where((m) => m.tournamentId == tournamentId).toList(),
           matchHistory: storeMatches,
         );
         if (enabled) {
@@ -662,6 +659,21 @@ class TournamentService {
 
   Future<void> deleteTournamentIfNotStarted({
     required String tournamentId,
+  }) async {
+    final matches = await _store.getTournamentMatches();
+    final hasStarted = matches.any((m) =>
+        m.tournamentId == tournamentId &&
+        m.status == TournamentMatchStatus.done);
+
+    if (hasStarted) {
+      throw StateError('Tournament has already started.');
+    }
+
+    await deleteTournament(tournamentId: tournamentId);
+  }
+
+  Future<void> deleteTournament({
+    required String tournamentId,
   }) {
     return _store.writeTransaction(() async {
       final tournaments = await _store.getTournaments();
@@ -671,32 +683,43 @@ class TournamentService {
         throw StateError('Tournament not found');
       }
 
-      final tournamentMatches = await _store.getTournamentMatches();
-      final relatedMatches = tournamentMatches
-          .where((match) => match.tournamentId == tournamentId)
-          .toList();
-      final hasStarted = relatedMatches.any(
-        (match) =>
-            match.status == TournamentMatchStatus.done ||
-            match.matchId != null,
-      );
-      if (hasStarted) {
-        throw StateError('Cannot delete a tournament after it has started.');
-      }
+      // 1. Identify match IDs to remove (history)
+      final allMatches = await _store.getMatches();
+      final tournamentMatchIds = allMatches
+          .where((m) => m.tournamentId == tournamentId)
+          .map((m) => m.id)
+          .toSet();
 
-      final history = await _store.getMatches();
-      final hasHistory =
-          history.any((match) => match.tournamentId == tournamentId);
-      if (hasHistory) {
-        throw StateError('Cannot delete a tournament with recorded matches.');
-      }
+      final remainingMatches =
+          allMatches.where((m) => !tournamentMatchIds.contains(m.id)).toList();
 
+      // 2. Remove Tournament Data
       tournaments.removeAt(index);
       final teams = await _store.getTournamentTeams();
       teams.removeWhere((team) => team.tournamentId == tournamentId);
+      final tournamentMatches = await _store.getTournamentMatches();
       tournamentMatches
           .removeWhere((match) => match.tournamentId == tournamentId);
 
+      // 3. Rebuild Elo if needed
+      if (tournamentMatchIds.isNotEmpty) {
+        final players = await _store.getPlayers();
+        final rebuild = _matchService.rebuildRatingsAndEvents(
+          remainingMatches,
+          players,
+        );
+        await _store.saveRatings(rebuild.ratings);
+        await _store.saveRatingEvents(rebuild.events);
+
+        // Invalidate caches
+        await PlayerStatsService(_store, EloCalculator())
+            .invalidateAllStatsCache();
+        await HeadToHeadService(_store).invalidateAllH2HCache();
+        await SeasonService(_store, EloCalculator()).invalidateAllSeasonCache();
+      }
+
+      // 4. Save Changes
+      await _store.saveMatches(remainingMatches);
       await _store.saveTournaments(tournaments);
       await _store.saveTournamentTeams(teams);
       await _store.saveTournamentMatches(tournamentMatches);

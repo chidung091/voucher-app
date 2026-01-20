@@ -166,9 +166,8 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
   }
 
   List<TournamentTeamInput> _randomizeTeamsFromPool() {
-    final poolPlayers = widget.players
-        .where((player) => _pool.contains(player.id))
-        .toList();
+    final poolPlayers =
+        widget.players.where((player) => _pool.contains(player.id)).toList();
     final minPlayers = _mode == MatchMode.oneVOne ? 2 : 3;
     if (poolPlayers.length < minPlayers) {
       throw ArgumentError('Select at least $minPlayers players.');
@@ -210,9 +209,8 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final poolPlayers = widget.players
-        .where((player) => _pool.contains(player.id))
-        .toList();
+    final poolPlayers =
+        widget.players.where((player) => _pool.contains(player.id)).toList();
     TeamBalanceResult? preview;
     String? poolError;
     if (_autoBalance) {
@@ -250,7 +248,6 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
             controller: _nameController,
             decoration: const InputDecoration(
               labelText: 'Tournament name',
-              border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
@@ -272,7 +269,6 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
             },
             decoration: const InputDecoration(
               labelText: 'Mode',
-              border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
@@ -395,17 +391,18 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
   }
 
   String _playerName(String id) {
-    return _players.firstWhere(
-      (player) => player.id == id,
-      orElse: () => Player(
-        id: id,
-        displayName: 'Unknown',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
-    ).displayName;
+    return _players
+        .firstWhere(
+          (player) => player.id == id,
+          orElse: () => Player(
+            id: id,
+            displayName: 'Unknown',
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        )
+        .displayName;
   }
-
 
   Future<void> _recordResult(
     TournamentMatch match,
@@ -414,16 +411,23 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
     MatchRatingMode ratingMode,
     double eloMultiplier,
   ) async {
-    final service = await _serviceFuture;
-    await service.recordTournamentMatchResult(
-      tournamentId: widget.tournamentId,
-      tournamentMatchId: match.id,
-      scoreHome: scoreHome,
-      scoreAway: scoreAway,
-      ratingMode: ratingMode,
-      eloMultiplier: eloMultiplier,
-    );
-    await _load();
+    try {
+      final service = await _serviceFuture;
+      await service.recordTournamentMatchResult(
+        tournamentId: widget.tournamentId,
+        tournamentMatchId: match.id,
+        scoreHome: scoreHome,
+        scoreAway: scoreAway,
+        ratingMode: ratingMode,
+        eloMultiplier: eloMultiplier,
+      );
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
   }
 
   Future<void> _forfeit(
@@ -493,10 +497,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    final canDelete = view.matches.every(
-      (match) =>
-          match.status != TournamentMatchStatus.done && match.matchId == null,
-    );
+    const canDelete = true;
     return Scaffold(
       appBar: AppBar(
         title: Text(view.tournament.name),
@@ -528,7 +529,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
                 if (confirm != true) return;
                 try {
                   final service = await _serviceFuture;
-                  await service.deleteTournamentIfNotStarted(
+                  await service.deleteTournament(
                     tournamentId: widget.tournamentId,
                   );
                   if (!context.mounted) return;
@@ -773,19 +774,20 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
     final starsText =
         assignedStars == null ? '--' : _formatStars(assignedStars);
     final clubName = club?.name ?? 'No club';
-    final mismatch = club != null &&
-        assignedStars != null &&
-        club.stars != assignedStars;
+    final mismatch =
+        club != null && assignedStars != null && club.stars != assignedStars;
     final clubStars = mismatch ? ' (${_formatStars(club.stars)})' : '';
     return '$side: $starsText / $clubName$clubStars';
   }
 
   Future<void> _editClubs(Club? homeClub, Club? awayClub) async {
-    final activeClubs =
-        widget.clubs.where((club) => club.deletedAt == null).toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
+    final activeClubs = widget.clubs
+        .where((club) => club.deletedAt == null)
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
     var auto = widget.match.clubAssignmentMode == ClubAssignmentMode.auto;
-    Club? selectedHome = homeClub ?? (activeClubs.isNotEmpty ? activeClubs[0] : null);
+    Club? selectedHome =
+        homeClub ?? (activeClubs.isNotEmpty ? activeClubs[0] : null);
     Club? selectedAway = awayClub ??
         (activeClubs.length > 1
             ? activeClubs[1]
@@ -821,7 +823,8 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
                         .map(
                           (club) => DropdownMenuItem(
                             value: club,
-                            child: Text('${club.name} - ${_formatStars(club.stars)}'),
+                            child: Text(
+                                '${club.name} - ${_formatStars(club.stars)}'),
                           ),
                         )
                         .toList(),
@@ -835,7 +838,8 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
                         .map(
                           (club) => DropdownMenuItem(
                             value: club,
-                            child: Text('${club.name} - ${_formatStars(club.stars)}'),
+                            child: Text(
+                                '${club.name} - ${_formatStars(club.stars)}'),
                           ),
                         )
                         .toList(),
@@ -911,11 +915,9 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
         widget.match.clubAssignmentMode == ClubAssignmentMode.manual
             ? 'MANUAL'
             : 'AUTO';
-    final hasSoloHandicap =
-        home.playerIds.length != away.playerIds.length &&
-            (home.playerIds.length == 1 || away.playerIds.length == 1);
-    final matchupLabel =
-        '${_teamPlayersLabel(home)} [${_teamSizeLabel(home)}] '
+    final hasSoloHandicap = home.playerIds.length != away.playerIds.length &&
+        (home.playerIds.length == 1 || away.playerIds.length == 1);
+    final matchupLabel = '${_teamPlayersLabel(home)} [${_teamSizeLabel(home)}] '
         '${_starsLabel(widget.match.homeAssignedStars)} '
         'vs ${_teamPlayersLabel(away)} [${_teamSizeLabel(away)}] '
         '${_starsLabel(widget.match.awayAssignedStars)}';
@@ -957,8 +959,10 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 6),
-            Text(_assignmentText('Home', homeClub, widget.match.homeAssignedStars)),
-            Text(_assignmentText('Away', awayClub, widget.match.awayAssignedStars)),
+            Text(_assignmentText(
+                'Home', homeClub, widget.match.homeAssignedStars)),
+            Text(_assignmentText(
+                'Away', awayClub, widget.match.awayAssignedStars)),
             TextButton(
               onPressed: widget.match.status == TournamentMatchStatus.done
                   ? null
@@ -1001,7 +1005,6 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
                   },
                   decoration: const InputDecoration(
                     labelText: 'Rating mode',
-                    border: OutlineInputBorder(),
                   ),
                 ),
               ],
@@ -1017,7 +1020,6 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         labelText: 'Home',
-                        border: OutlineInputBorder(),
                       ),
                     ),
                   ),
@@ -1028,7 +1030,6 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         labelText: 'Away',
-                        border: OutlineInputBorder(),
                       ),
                     ),
                   ),
