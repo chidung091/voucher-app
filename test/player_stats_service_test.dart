@@ -296,7 +296,7 @@ void main() {
     final stats = await service.getPlayerStats('p1');
 
     expect(stats.eloHistory.length, 4);
-    expect(stats.eloHistory.first.elo, EloConfig.initialEloForSkill(2));
+    expect(stats.eloHistory.first.elo, EloConfig.defaultElo);
     expect(stats.eloHistory[1].elo, 1020);
     expect(stats.eloHistory[2].elo, 990);
     expect(stats.eloHistory[3].elo, 1050);

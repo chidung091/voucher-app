@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../domain/elo_config.dart';
 import '../../domain/player.dart';
+import '../../domain/player_rating.dart';
 import '../../services/player_service.dart';
 
 class PlayersScreen extends StatefulWidget {
@@ -12,38 +15,64 @@ class PlayersScreen extends StatefulWidget {
 }
 
 class _PlayersScreenState extends State<PlayersScreen> {
-  final TextEditingController _controller = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _eloController = TextEditingController();
   int _skillLevel = 2;
   late Future<PlayerService> _serviceFuture;
   List<Player> _players = [];
+  Map<String, PlayerRating> _ratings = {};
 
   @override
   void initState() {
     super.initState();
+    _eloController.text = EloConfig.defaultElo.toString();
     _serviceFuture = PlayerService.create();
     _serviceFuture.then(_load);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _nameController.dispose();
+    _eloController.dispose();
     super.dispose();
   }
 
   Future<void> _load(PlayerService service) async {
     final players = await service.listPlayers();
-    setState(() => _players = players);
+    final ratings = await service.getRatings();
+    setState(() {
+      _players = players;
+      _ratings = ratings;
+    });
   }
 
   Future<void> _add(PlayerService service) async {
-    await service.createPlayer(_controller.text, skillLevel: _skillLevel);
-    _controller.clear();
-    await _load(service);
+    final elo = int.tryParse(_eloController.text) ?? EloConfig.defaultElo;
+    try {
+      await service.createPlayer(
+        _nameController.text,
+        skillLevel: _skillLevel,
+        initialElo: elo,
+      );
+      _nameController.clear();
+      _eloController.text = EloConfig.defaultElo.toString();
+      await _load(service);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
   }
 
   Future<void> _edit(PlayerService service, Player player) async {
-    final controller = TextEditingController(text: player.displayName);
+    final nameController = TextEditingController(text: player.displayName);
+    final currentRating = _ratings[player.id];
+    final eloController = TextEditingController(
+      text: (currentRating?.elo ?? EloConfig.defaultElo).toString(),
+    );
     var selectedSkill = player.skillLevel;
+
     final result = await showDialog<_EditResult>(
       context: context,
       builder: (context) => AlertDialog(
@@ -52,8 +81,18 @@ class _PlayersScreenState extends State<PlayersScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              controller: controller,
+              controller: nameController,
               decoration: const InputDecoration(labelText: 'Display name'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: eloController,
+              decoration: InputDecoration(
+                labelText: 'ELO Rating',
+                helperText: '${EloConfig.minElo} - ${EloConfig.maxElo}',
+              ),
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<int>(
@@ -79,7 +118,11 @@ class _PlayersScreenState extends State<PlayersScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(
-              _EditResult(controller.text, selectedSkill),
+              _EditResult(
+                nameController.text,
+                selectedSkill,
+                int.tryParse(eloController.text),
+              ),
             ),
             child: const Text('Save'),
           ),
@@ -92,6 +135,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
           player.id,
           result.name,
           skillLevel: result.skillLevel,
+          elo: result.elo,
         );
         await _load(service);
       } catch (error) {
@@ -128,8 +172,9 @@ class _PlayersScreenState extends State<PlayersScreen> {
             Row(
               children: [
                 Expanded(
+                  flex: 2,
                   child: TextField(
-                    controller: _controller,
+                    controller: _nameController,
                     decoration: const InputDecoration(
                       labelText: 'Player name',
                       border: OutlineInputBorder(),
@@ -138,12 +183,26 @@ class _PlayersScreenState extends State<PlayersScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                SizedBox(
+                  width: 100,
+                  child: TextField(
+                    controller: _eloController,
+                    decoration: const InputDecoration(
+                      labelText: 'ELO',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onSubmitted: (_) => _add(service),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 DropdownButton<int>(
                   value: _skillLevel,
                   items: const [
-                    DropdownMenuItem(value: 1, child: Text('1 · Strong')),
-                    DropdownMenuItem(value: 2, child: Text('2 · Medium')),
-                    DropdownMenuItem(value: 3, child: Text('3 · Beginner')),
+                    DropdownMenuItem(value: 1, child: Text('L1')),
+                    DropdownMenuItem(value: 2, child: Text('L2')),
+                    DropdownMenuItem(value: 3, child: Text('L3')),
                   ],
                   onChanged: (value) {
                     if (value != null) {
@@ -163,30 +222,34 @@ class _PlayersScreenState extends State<PlayersScreen> {
               const Text('No players yet.')
             else
               ..._players.map(
-                (player) => Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    title: Text(player.displayName),
-                    subtitle: Text('ID: ${player.id.substring(0, 6)}'),
-                    leading: Chip(
-                      label: Text('L${player.skillLevel}'),
+                (player) {
+                  final rating = _ratings[player.id];
+                  final eloDisplay = rating?.elo ?? EloConfig.defaultElo;
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      title: Text(player.displayName),
+                      subtitle: Text('ELO: $eloDisplay'),
+                      leading: Chip(
+                        label: Text('L${player.skillLevel}'),
+                      ),
+                      onTap: () => context.go('/players/${player.id}'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            onPressed: () => _edit(service, player),
+                            icon: const Icon(Icons.edit_outlined),
+                          ),
+                          IconButton(
+                            onPressed: () => _delete(service, player),
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                        ],
+                      ),
                     ),
-                    onTap: () => context.go('/players/${player.id}'),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          onPressed: () => _edit(service, player),
-                          icon: const Icon(Icons.edit_outlined),
-                        ),
-                        IconButton(
-                          onPressed: () => _delete(service, player),
-                          icon: const Icon(Icons.delete_outline),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                  );
+                },
               ),
             const SizedBox(height: 8),
             TextButton(
@@ -201,8 +264,9 @@ class _PlayersScreenState extends State<PlayersScreen> {
 }
 
 class _EditResult {
-  const _EditResult(this.name, this.skillLevel);
+  const _EditResult(this.name, this.skillLevel, this.elo);
 
   final String name;
   final int skillLevel;
+  final int? elo;
 }

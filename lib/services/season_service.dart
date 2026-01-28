@@ -126,10 +126,7 @@ class SeasonService {
 
     final states = <String, _SeasonPlayerState>{};
     for (final id in idSet) {
-      final player = playerMap[id];
-      final skill = player?.skillLevel ?? 2;
-      final boundary = boundaryResult.boundaryElo[id] ??
-          EloConfig.initialEloForSkill(skill);
+      final boundary = boundaryResult.boundaryElo[id] ?? EloConfig.defaultElo;
       final startElo = _applyReset(boundary, config);
       states[id] = _SeasonPlayerState(
         startElo: startElo,
@@ -249,9 +246,7 @@ class SeasonService {
     if (events.isEmpty) {
       estimated = true;
       for (final id in playerIds) {
-        final skill = players[id]?.skillLevel ?? 2;
-        boundaryElo[id] =
-            ratings[id]?.elo ?? EloConfig.initialEloForSkill(skill);
+        boundaryElo[id] = ratings[id]?.elo ?? EloConfig.defaultElo;
       }
       return _BoundaryResult(
         boundaryElo: boundaryElo,
@@ -272,9 +267,8 @@ class SeasonService {
     }
 
     for (final id in playerIds) {
-      final skill = players[id]?.skillLevel ?? 2;
       final existing = lastBefore[id];
-      boundaryElo[id] = existing?.newElo ?? EloConfig.initialEloForSkill(skill);
+      boundaryElo[id] = existing?.newElo ?? EloConfig.defaultElo;
     }
 
     return _BoundaryResult(

@@ -49,6 +49,36 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => context.go('/seasons'),
           ),
         ),
+        const SizedBox(height: 8),
+        Card(
+          color: Theme.of(context).colorScheme.errorContainer,
+          child: ListTile(
+            leading: Icon(
+              Icons.restart_alt,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            title: Text(
+              'Reset ELO Ratings',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onErrorContainer,
+              ),
+            ),
+            subtitle: Text(
+              'Reset all ratings and start fresh',
+              style: TextStyle(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onErrorContainer
+                    .withOpacity(0.7),
+              ),
+            ),
+            trailing: Icon(
+              Icons.chevron_right,
+              color: Theme.of(context).colorScheme.onErrorContainer,
+            ),
+            onTap: () => context.go('/settings/elo-reset'),
+          ),
+        ),
       ],
     );
   }

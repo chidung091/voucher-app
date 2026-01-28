@@ -211,8 +211,7 @@ class TeamBalancer {
   ) {
     return players.map((player) {
       final rating = ratings[player.id];
-      final elo =
-          rating?.elo ?? EloConfig.initialEloForSkill(player.skillLevel);
+      final elo = rating?.elo ?? EloConfig.defaultElo;
       return PlayerEloEntry(player: player, elo: elo);
     }).toList();
   }

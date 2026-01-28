@@ -7,6 +7,7 @@ import '../ui/screens/leaderboard_screen.dart';
 import '../ui/screens/more_screen.dart';
 import '../ui/screens/new_match_screen.dart';
 import '../ui/screens/clubs_screen.dart';
+import '../ui/screens/elo_reset_screen.dart';
 import '../ui/screens/head_to_head_screen.dart';
 import '../ui/screens/player_profile_screen.dart';
 import '../ui/screens/players_screen.dart';
@@ -86,6 +87,11 @@ GoRouter buildRouter(Ref ref) {
             path: '/settings/data',
             name: 'data-management',
             builder: (context, state) => const DataManagementScreen(),
+          ),
+          GoRoute(
+            path: '/settings/elo-reset',
+            name: 'elo-reset',
+            builder: (context, state) => const EloResetScreen(),
           ),
           GoRoute(
             path: '/more',

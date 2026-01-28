@@ -226,11 +226,10 @@ class MatchService {
     String playerId,
     Map<String, Player> playerMap,
   ) {
-    final skill = playerMap[playerId]?.skillLevel ?? 2;
     return ratings[playerId] ??
         PlayerRating(
           playerId: playerId,
-          elo: EloConfig.initialEloForSkill(skill),
+          elo: EloConfig.defaultElo,
           gamesPlayed: 0,
           wins: 0,
           draws: 0,

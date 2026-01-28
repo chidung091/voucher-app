@@ -60,7 +60,7 @@ class PlayerStatsService {
     final totals = _computeTotals(playerId, playerMatches);
     final streaks = _computeStreaks(playerId, playerMatches);
 
-    final initialElo = EloConfig.initialEloForSkill(player.skillLevel);
+    final initialElo = EloConfig.defaultElo;
     final eloHistory = playerEvents.isNotEmpty
         ? _buildHistoryFromEvents(
             player,
@@ -216,9 +216,8 @@ class PlayerStatsService {
     }
 
     final totalMatches = matches.length;
-    final winRate = totalMatches == 0
-        ? 0.0
-        : _round1((wins / totalMatches) * 100);
+    final winRate =
+        totalMatches == 0 ? 0.0 : _round1((wins / totalMatches) * 100);
 
     return _Totals(
       totalMatches: totalMatches,
@@ -299,16 +298,12 @@ class PlayerStatsService {
       return history;
     }
 
-    final skills = {
-      for (final entry in players) entry.id: entry.skillLevel,
-    };
     final states = <String, _EloState>{};
 
     _EloState ensureState(String id) {
       return states.putIfAbsent(id, () {
-        final skill = skills[id] ?? 2;
         return _EloState(
-          elo: EloConfig.initialEloForSkill(skill),
+          elo: EloConfig.defaultElo,
           gamesPlayed: 0,
         );
       });

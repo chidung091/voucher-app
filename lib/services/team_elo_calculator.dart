@@ -28,8 +28,7 @@ class TeamEloCalculator {
     final elos = playerIds.map((id) {
       final rating = ratings[id]?.elo;
       if (rating != null) return rating.toDouble();
-      final skill = players[id]?.skillLevel ?? 2;
-      return EloConfig.initialEloForSkill(skill).toDouble();
+      return EloConfig.defaultElo.toDouble();
     }).toList();
 
     final raw = elos.reduce((a, b) => a + b) / elos.length;
