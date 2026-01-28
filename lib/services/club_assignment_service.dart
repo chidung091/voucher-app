@@ -42,12 +42,20 @@ class ClubAssignmentService {
     final strongBase = baseStars(rank: rankStrong, teamCount: teamCount);
     final weakBase = baseStars(rank: rankWeak, teamCount: teamCount);
     final baseline = roundToStep((strongBase + weakBase) / 2, step);
-    final strongHandicap =
-        (teamSizeStrong == 1 && teamSizeWeak == 2) ? 0.5 : 0.0;
-    final weakHandicap = (teamSizeWeak == 1 && teamSizeStrong == 2) ? 0.5 : 0.0;
 
-    // Dynamic spread based on Elo difference
-    // If undefined or small (< 60), use 0.25 (total 0.5 gap).
+    // When ELO difference is very small (<50), both teams get equal stars
+    // This handles the case where teams have similar strength
+    final isCloseMatch = eloDiff != null && eloDiff.abs() < 50;
+
+    if (isCloseMatch) {
+      // Both teams get baseline stars (equal match)
+      final equalStars =
+          roundToStep(baseline, step).clamp(1.0, maxStar).toDouble();
+      return MatchupStars(strongStars: equalStars, weakStars: equalStars);
+    }
+
+    // Dynamic spread based on Elo difference only (no solo handicap)
+    // If undefined or small (<60), use 0.25 (total 0.5 gap).
     // If larger, scale up: ~100 elo -> 0.5 spread (total 1.0 gap).
     double spread = 0.25;
     if (eloDiff != null) {
@@ -57,8 +65,8 @@ class ClubAssignmentService {
       spread = max(0.25, calculated);
     }
 
-    final strongRaw = baseline - spread + strongHandicap;
-    final weakRaw = baseline + spread + weakHandicap;
+    final strongRaw = baseline - spread;
+    final weakRaw = baseline + spread;
 
     final strong = roundToStep(strongRaw, step).clamp(1.0, maxStar).toDouble();
     final weak = roundToStep(weakRaw, step).clamp(1.0, maxStar).toDouble();

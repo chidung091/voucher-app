@@ -58,7 +58,7 @@ void main() {
     expect(cap.weakStars, 5.0);
   });
 
-  test('matchupStars applies solo handicap for 1v2', () {
+  test('matchupStars same for 1v2 as any other match (no solo handicap)', () {
     final stars = ClubAssignmentService.matchupStars(
       rankStrong: 1,
       rankWeak: 2,
@@ -66,11 +66,10 @@ void main() {
       teamSizeStrong: 1,
       teamSizeWeak: 2,
     );
-    // Baseline 4.5. Spread +/- 0.25 -> 4.25 / 4.75.
-    // Handicap +0.5 to strong (solo).
-    // Strong: 4.25 + 0.5 = 4.75. Round(0.5) -> 5.0.
-    // Weak: 4.75. Round(0.5) -> 5.0.
-    expect(stars.strongStars, 5.0);
+    // Baseline 4.5. No eloDiff provided so spread = 0.25
+    // Strong: 4.5 - 0.25 = 4.25 -> rounds to 4.5
+    // Weak: 4.5 + 0.25 = 4.75 -> rounds to 5.0
+    expect(stars.strongStars, 4.5);
     expect(stars.weakStars, 5.0);
   });
 
@@ -98,22 +97,19 @@ void main() {
     expect(stars.weakStars, 5.0);
   });
 
-  test('matchupStars dynamic spread for close elo', () {
-    // Diff 40 -> (40/200) = 0.2, max(0.25, 0.2) -> 0.25 spread.
-    // Result: 4.75 vs 5.25 (clamped 5.0).
-    // Or baselines 4.0/4.5 (avg 4.25) -> 4.0 / 4.5.
-    // Let's take rank 1 vs 2 (TeamCount 3) -> Base 4.0, 4.5. Baseline 4.5.
-    // Spread 0.25. 4.25 / 4.75. Rounds to 4.5 / 5.0. Gap 0.5.
+  test('matchupStars gives equal stars for close elo (<50)', () {
+    // When eloDiff < 50, both teams get equal stars (baseline)
+    // Baseline 4.5. Both teams get 4.5.
     final stars = ClubAssignmentService.matchupStars(
       rankStrong: 1,
       rankWeak: 2,
       teamCount: 3,
       teamSizeStrong: 2,
       teamSizeWeak: 2,
-      eloDiff: 36, // < 60 approx
+      eloDiff: 36, // < 50, so equal stars
     );
     expect(stars.strongStars, 4.5);
-    expect(stars.weakStars, 5.0);
+    expect(stars.weakStars, 4.5); // Equal because close match
   });
 
   test('matchupStars dynamic spread for huge elo diff', () {
@@ -133,12 +129,9 @@ void main() {
     expect(stars.weakStars, 5.0);
   });
 
-  test(
-      'matchupStars prefers 4.5 vs 5.0 for moderate diff provided in user example',
-      () {
+  test('matchupStars gives equal stars for user example (diff 36 < 50)', () {
     // User Example: Team 2 (2055) vs Team 3 (2019). Diff 36.
-    // Ranks likely 1 and 2 if close.
-    // Should behave like close elo test -> 4.5 vs 5.0.
+    // Since diff < 50, both teams get equal stars.
     final stars = ClubAssignmentService.matchupStars(
       rankStrong: 1,
       rankWeak: 2,
@@ -148,7 +141,7 @@ void main() {
       eloDiff: 36,
     );
     expect(stars.strongStars, 4.5);
-    expect(stars.weakStars, 5.0);
+    expect(stars.weakStars, 4.5); // Equal because close match
   });
 
   test('pickClub prefers exact stars and is deterministic with seed', () {
