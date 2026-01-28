@@ -9,7 +9,6 @@ class AdaptiveScaffold extends StatelessWidget {
   final Widget child;
 
   @override
-  @override
   Widget build(BuildContext context) {
     // Full list for Tablet/Desktop
     final allItems = [
@@ -88,24 +87,10 @@ class AdaptiveScaffold extends StatelessWidget {
 
     final location = GoRouterState.of(context).uri.path;
 
-    // Find active index based on activeItems
-    // For mobile, if we are on a route not in main tabs (e.g. players), select 'More'
     int selectedIndex =
         activeItems.indexWhere((item) => location.startsWith(item.route));
     if (selectedIndex == -1) {
       if (!isTablet) {
-        // On mobile, check if the current location is one of the "More" items
-        // The "More" item is the last one (index 4)
-        // Routes under "More" are: /players, /clubs, /seasons, /h2h, /settings
-        // The 'More' tab route itself is '/more'
-        // If location is any of those, we highly likely want to highlight 'More'.
-        // But wait, if I am in /players, activeItems doesn't contain /players on mobile.
-        // So I should default to the last tab (More) if no match found?
-        // Or maybe just highlight nothing?
-        // Standard pattern: Highlight 'More' if inside a section that belongs to it.
-        // Let's assume 'More' is the catch-all for unknown routes at this level?
-        // Actually, if I navigate to /players on mobile, navigation bar should show 'More' selected?
-        // Yes.
         selectedIndex = 4; // 'More' tab
       } else {
         selectedIndex = 0; // Default to Home if lost on Tablet
@@ -131,6 +116,32 @@ class AdaptiveScaffold extends StatelessWidget {
       ],
     );
 
+    // Animated content with smooth transitions
+    final animatedChild = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      switchInCurve: Curves.easeInOut,
+      switchOutCurve: Curves.easeInOut,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.02, 0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOut,
+            )),
+            child: child,
+          ),
+        );
+      },
+      child: KeyedSubtree(
+        key: ValueKey<String>(location),
+        child: child,
+      ),
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: Text(pageTitle),
@@ -140,14 +151,15 @@ class AdaptiveScaffold extends StatelessWidget {
               children: [
                 rail,
                 const VerticalDivider(width: 1),
-                Expanded(child: child),
+                Expanded(child: animatedChild),
               ],
             )
-          : child,
+          : animatedChild,
       bottomNavigationBar: isTablet
           ? null
           : NavigationBar(
               selectedIndex: selectedIndex,
+              animationDuration: const Duration(milliseconds: 400),
               onDestinationSelected: (index) =>
                   context.go(activeItems[index].route),
               destinations: [
