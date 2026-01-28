@@ -15,6 +15,7 @@ import '../../services/club_service.dart';
 import '../../services/player_service.dart';
 import '../../services/team_balancer.dart';
 import '../../services/tournament_service.dart';
+import '../components/components.dart';
 
 class TournamentScreen extends StatefulWidget {
   const TournamentScreen({super.key});
@@ -79,9 +80,9 @@ class _TournamentScreenState extends State<TournamentScreen> {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
             ),
-            FilledButton(
+            PrimaryButton(
               onPressed: _openCreate,
-              child: const Text('Create'),
+              label: 'Create',
             ),
           ],
         ),
@@ -90,13 +91,15 @@ class _TournamentScreenState extends State<TournamentScreen> {
           const Text('No tournaments yet.')
         else
           ..._tournaments.map(
-            (tournament) => Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                title: Text(tournament.name),
-                subtitle: Text(tournament.status.toJson()),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _openDetail(tournament.id),
+            (tournament) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: AppCard(
+                child: CustomListTile(
+                  title: tournament.name,
+                  subtitle: tournament.status.toJson(),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _openDetail(tournament.id),
+                ),
               ),
             ),
           ),
@@ -268,35 +271,24 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          TextField(
+          CustomTextField(
             controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Tournament name',
-            ),
+            label: 'Tournament name',
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<MatchMode>(
+          DropdownField<MatchMode>(
             value: _mode,
-            items: const [
-              DropdownMenuItem(
-                value: MatchMode.oneVOne,
-                child: Text('1v1'),
-              ),
-              DropdownMenuItem(
-                value: MatchMode.twoVTwo,
-                child: Text('2v2'),
-              ),
-            ],
-            onChanged: (value) {
+            items: const [MatchMode.oneVOne, MatchMode.twoVTwo],
+            itemBuilder: (mode) =>
+                Text(mode == MatchMode.oneVOne ? '1v1' : '2v2'),
+            onSelected: (value) {
               if (value == null) return;
               setState(() {
                 _mode = value;
                 if (!showSoloPicker) _forceSoloPlayerId = null;
               });
             },
-            decoration: const InputDecoration(
-              labelText: 'Mode',
-            ),
+            label: 'Mode',
           ),
           const SizedBox(height: 16),
           SwitchListTile(
@@ -341,26 +333,18 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
           ),
           if (showSoloPicker) ...[
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
+            DropdownField<String?>(
               value: _forceSoloPlayerId,
-              items: [
-                const DropdownMenuItem(
-                  value: null,
-                  child: Text('Auto-detect Solo Player'),
-                ),
-                ...poolPlayers.map(
-                  (p) => DropdownMenuItem(
-                    value: p.id,
-                    child: Text('Solo: ${p.displayName}'),
-                  ),
-                ),
-              ],
-              onChanged: (value) {
+              items: <String?>[null, ...poolPlayers.map((p) => p.id)],
+              itemBuilder: (id) {
+                if (id == null) return const Text('Auto-detect Solo Player');
+                final p = poolPlayers.firstWhere((p) => p.id == id);
+                return Text('Solo: ${p.displayName}');
+              },
+              onSelected: (value) {
                 setState(() => _forceSoloPlayerId = value);
               },
-              decoration: const InputDecoration(
-                labelText: 'Designate Solo Player (Optional)',
-              ),
+              label: 'Designate Solo Player (Optional)',
             ),
           ],
           if (poolError != null) ...[
@@ -396,9 +380,9 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
             Text(_error!, style: const TextStyle(color: Colors.red)),
           ],
           const SizedBox(height: 16),
-          FilledButton(
+          PrimaryButton(
             onPressed: _create,
-            child: const Text('Create Tournament'),
+            label: 'Create Tournament',
           ),
         ],
       ),
@@ -563,19 +547,19 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
               onPressed: () async {
                 final confirm = await showDialog<bool>(
                   context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Delete tournament'),
+                  builder: (context) => CustomDialog(
+                    title: 'Delete tournament',
                     content: const Text(
                       'This will remove the tournament and its schedule.',
                     ),
                     actions: [
-                      TextButton(
+                      SecondaryButton(
+                        label: 'Cancel',
                         onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text('Cancel'),
                       ),
-                      FilledButton(
+                      DangerButton(
+                        label: 'Delete',
                         onPressed: () => Navigator.of(context).pop(true),
-                        child: const Text('Delete'),
                       ),
                     ],
                   ),
@@ -606,23 +590,24 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
-          OutlinedButton(
+          SecondaryButton(
+            label: 'Reset results',
             onPressed: () async {
               final confirm = await showDialog<bool>(
                 context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Reset tournament results'),
+                builder: (context) => CustomDialog(
+                  title: 'Reset tournament results',
                   content: const Text(
                     'This will delete all results and recalculate Elo for the remaining matches.',
                   ),
                   actions: [
-                    TextButton(
+                    SecondaryButton(
+                      label: 'Cancel',
                       onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Cancel'),
                     ),
-                    FilledButton(
+                    DangerButton(
+                      label: 'Reset',
                       onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text('Reset'),
                     ),
                   ],
                 ),
@@ -634,7 +619,6 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
               );
               await _load();
             },
-            child: const Text('Reset results'),
           ),
           if (view.tournament.status != TournamentStatus.completed) ...[
             const SizedBox(height: 8),
@@ -673,11 +657,11 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              TextButton(
+              SecondaryButton(
+                label: 'Auto-assign clubs now',
                 onPressed: _clubs.any((club) => club.deletedAt == null)
                     ? _autoAssignAll
                     : null,
-                child: const Text('Auto-assign clubs now'),
               ),
             ],
           ),
@@ -694,15 +678,18 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> {
               ),
             ),
           ...view.matches.map(
-            (match) => _TournamentMatchCard(
-              match: match,
-              teams: view.teams,
-              clubs: _clubs,
-              playerName: _playerName,
-              onSave: _recordResult,
-              onForfeit: _forfeit,
-              onAutoAssign: _autoAssignMatch,
-              onManualAssign: _manualAssignMatch,
+            (match) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _TournamentMatchCard(
+                match: match,
+                teams: view.teams,
+                clubs: _clubs,
+                playerName: _playerName,
+                onSave: _recordResult,
+                onForfeit: _forfeit,
+                onAutoAssign: _autoAssignMatch,
+                onManualAssign: _manualAssignMatch,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -850,8 +837,8 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
     final result = await showDialog<_ClubAssignmentResult>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Club assignment'),
+        builder: (context, setState) => CustomDialog(
+          title: 'Club assignment',
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -904,11 +891,12 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
             ],
           ),
           actions: [
-            TextButton(
+            SecondaryButton(
+              label: 'Cancel',
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
             ),
-            FilledButton(
+            PrimaryButton(
+              label: 'Save',
               onPressed: auto
                   ? () => Navigator.of(context).pop(
                         _ClubAssignmentResult(auto: true),
@@ -922,7 +910,6 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
                               awayClub: selectedAway,
                             ),
                           ),
-              child: const Text('Save'),
             ),
           ],
         ),
@@ -976,164 +963,160 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
         'vs ${_teamPlayersLabel(away)} [${_teamSizeLabel(away)}] '
         '${_starsLabel(widget.match.awayAssignedStars)}';
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${home.name} vs ${away.name}',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Row(
-              children: [
-                Text(widget.match.stage.toJson()),
-                const SizedBox(width: 8),
-                Text(
-                  modeLabel,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-                if (hasSoloHandicap) ...[
-                  const SizedBox(width: 8),
-                  Tooltip(
-                    message: 'Solo team receives +0.5 star handicap.',
-                    child: const Icon(
-                      Icons.info_outline,
-                      size: 16,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              matchupLabel,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 6),
-            Text(_assignmentText(
-                'Home', homeClub, widget.match.homeAssignedStars)),
-            Text(_assignmentText(
-                'Away', awayClub, widget.match.awayAssignedStars)),
-            TextButton(
-              onPressed: widget.match.status == TournamentMatchStatus.done
-                  ? null
-                  : () => _editClubs(homeClub, awayClub),
-              child: const Text('Edit clubs'),
-            ),
-            if (widget.match.status == TournamentMatchStatus.done)
-              const Text('Completed'),
-            if (widget.match.status != TournamentMatchStatus.done) ...[
-              const SizedBox(height: 4),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Override rating mode'),
-                value: _overrideRatingMode,
-                onChanged: (value) {
-                  setState(() => _overrideRatingMode = value);
-                },
-              ),
-              if (_overrideRatingMode) ...[
-                const SizedBox(height: 4),
-                DropdownButtonFormField<MatchRatingMode>(
-                  value: _ratingMode,
-                  items: const [
-                    DropdownMenuItem(
-                      value: MatchRatingMode.friendly,
-                      child: Text('Friendly'),
-                    ),
-                    DropdownMenuItem(
-                      value: MatchRatingMode.ranked,
-                      child: Text('Ranked'),
-                    ),
-                    DropdownMenuItem(
-                      value: MatchRatingMode.tournament,
-                      child: Text('Tournament'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() => _ratingMode = value);
-                  },
-                  decoration: const InputDecoration(
-                    labelText: 'Rating mode',
-                  ),
-                ),
-              ],
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${home.name} vs ${away.name}',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          Row(
+            children: [
+              Text(widget.match.stage.toJson()),
+              const SizedBox(width: 8),
               Text(
-                'Multiplier: ${_effectiveMultiplier().toStringAsFixed(1)}x',
+                modeLabel,
+                style: Theme.of(context).textTheme.labelSmall,
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _scoreHome,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Home',
-                      ),
-                    ),
+              if (hasSoloHandicap) ...[
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'Solo team receives +0.5 star handicap.',
+                  child: const Icon(
+                    Icons.info_outline,
+                    size: 16,
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _scoreAway,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Away',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: () async {
-                      final homeScore = int.tryParse(_scoreHome.text) ?? 0;
-                      final awayScore = int.tryParse(_scoreAway.text) ?? 0;
-                      await widget.onSave(
-                        widget.match,
-                        homeScore,
-                        awayScore,
-                        _effectiveRatingMode(),
-                        _effectiveMultiplier(),
-                      );
-                    },
-                    child: const Text('Save'),
-                  ),
-                ],
-              ),
-              if (widget.match.stage == TournamentStage.finalStage &&
-                  widget.match.homeTeamIndex >= 0 &&
-                  widget.match.awayTeamIndex >= 0) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    TextButton(
-                      onPressed: () async {
-                        await widget.onForfeit(
-                          widget.match,
-                          home.teamIndex,
-                        );
-                      },
-                      child: const Text('Forfeit home'),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        await widget.onForfeit(
-                          widget.match,
-                          away.teamIndex,
-                        );
-                      },
-                      child: const Text('Forfeit away'),
-                    ),
-                  ],
                 ),
               ],
             ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            matchupLabel,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 6),
+          Text(_assignmentText(
+              'Home', homeClub, widget.match.homeAssignedStars)),
+          Text(_assignmentText(
+              'Away', awayClub, widget.match.awayAssignedStars)),
+          SecondaryButton(
+            onPressed: widget.match.status == TournamentMatchStatus.done
+                ? null
+                : () => _editClubs(homeClub, awayClub),
+            label: 'Edit clubs',
+          ),
+          if (widget.match.status == TournamentMatchStatus.done)
+            const Text('Completed'),
+          if (widget.match.status != TournamentMatchStatus.done) ...[
+            const SizedBox(height: 4),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Override rating mode'),
+              value: _overrideRatingMode,
+              onChanged: (value) {
+                setState(() => _overrideRatingMode = value);
+              },
+            ),
+            if (_overrideRatingMode) ...[
+              const SizedBox(height: 4),
+              DropdownButtonFormField<MatchRatingMode>(
+                value: _ratingMode,
+                items: const [
+                  DropdownMenuItem(
+                    value: MatchRatingMode.friendly,
+                    child: Text('Friendly'),
+                  ),
+                  DropdownMenuItem(
+                    value: MatchRatingMode.ranked,
+                    child: Text('Ranked'),
+                  ),
+                  DropdownMenuItem(
+                    value: MatchRatingMode.tournament,
+                    child: Text('Tournament'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _ratingMode = value);
+                },
+                decoration: const InputDecoration(
+                  labelText: 'Rating mode',
+                ),
+              ),
+            ],
+            Text(
+              'Multiplier: ${_effectiveMultiplier().toStringAsFixed(1)}x',
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _scoreHome,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Home',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _scoreAway,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Away',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                PrimaryButton(
+                  onPressed: () async {
+                    final homeScore = int.tryParse(_scoreHome.text) ?? 0;
+                    final awayScore = int.tryParse(_scoreAway.text) ?? 0;
+                    await widget.onSave(
+                      widget.match,
+                      homeScore,
+                      awayScore,
+                      _effectiveRatingMode(),
+                      _effectiveMultiplier(),
+                    );
+                  },
+                  label: 'Save',
+                ),
+              ],
+            ),
+            if (widget.match.stage == TournamentStage.finalStage &&
+                widget.match.homeTeamIndex >= 0 &&
+                widget.match.awayTeamIndex >= 0) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  SecondaryButton(
+                    onPressed: () async {
+                      await widget.onForfeit(
+                        widget.match,
+                        home.teamIndex,
+                      );
+                    },
+                    label: 'Forfeit home',
+                  ),
+                  SecondaryButton(
+                    onPressed: () async {
+                      await widget.onForfeit(
+                        widget.match,
+                        away.teamIndex,
+                      );
+                    },
+                    label: 'Forfeit away',
+                  ),
+                ],
+              ),
+            ],
           ],
-        ),
+        ],
       ),
     );
   }

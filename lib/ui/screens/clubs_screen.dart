@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../domain/club.dart';
 import '../../services/club_service.dart';
+import '../components/components.dart';
 
 class ClubsScreen extends StatefulWidget {
   const ClubsScreen({super.key});
@@ -50,43 +51,37 @@ class _ClubsScreenState extends State<ClubsScreen> {
     var selectedStars = club?.stars ?? 4.0;
     return showDialog<_ClubEditResult>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(club == null ? 'Add club' : 'Edit club'),
+      builder: (context) => CustomDialog(
+        title: club == null ? 'Add club' : 'Edit club',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
+            CustomTextField(
               controller: controller,
-              decoration: const InputDecoration(labelText: 'Club name'),
+              label: 'Club name',
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<double>(
+            DropdownField<double>(
               value: selectedStars,
-              decoration: const InputDecoration(labelText: 'Stars'),
-              items: _starOptions
-                  .map(
-                    (value) => DropdownMenuItem(
-                      value: value,
-                      child: Text(_formatStars(value)),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) {
+              label: 'Stars',
+              items: _starOptions,
+              itemBuilder: (value) => Text(_formatStars(value)),
+              onSelected: (value) {
                 if (value != null) selectedStars = value;
               },
             ),
           ],
         ),
         actions: [
-          TextButton(
+          SecondaryButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            label: 'Cancel',
           ),
-          FilledButton(
+          PrimaryButton(
             onPressed: () => Navigator.of(context).pop(
               _ClubEditResult(controller.text, selectedStars),
             ),
-            child: const Text('Save'),
+            label: 'Save',
           ),
         ],
       ),
@@ -102,8 +97,7 @@ class _ClubsScreenState extends State<ClubsScreen> {
         if (service == null) {
           return const Center(child: CircularProgressIndicator());
         }
-        final sorted = [..._clubs]
-          ..sort((a, b) {
+        final sorted = [..._clubs]..sort((a, b) {
             final diff = b.stars.compareTo(a.stars);
             if (diff != 0) return diff;
             return a.name.compareTo(b.name);
@@ -119,21 +113,24 @@ class _ClubsScreenState extends State<ClubsScreen> {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                 ),
-                FilledButton(
+                PrimaryButton(
                   onPressed: () => _create(service),
-                  child: const Text('Add'),
+                  label: 'Add',
                 ),
               ],
             ),
             const SizedBox(height: 12),
             if (sorted.isEmpty)
-              const Text('No clubs yet.')
+              const EmptyState(
+                title: 'No clubs yet',
+                icon: Icons.shield_outlined,
+              )
             else
               ..._buildClubList(sorted, service),
             const SizedBox(height: 8),
-            TextButton(
+            SecondaryButton(
               onPressed: () => _load(service),
-              child: const Text('Refresh'),
+              label: 'Refresh',
             ),
           ],
         );
@@ -158,23 +155,25 @@ class _ClubsScreenState extends State<ClubsScreen> {
         );
       }
       widgets.add(
-        Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            title: Text(club.name),
-            subtitle: Text(_formatStars(club.stars)),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  onPressed: () => _edit(service, club),
-                  icon: const Icon(Icons.edit_outlined),
-                ),
-                IconButton(
-                  onPressed: () => _delete(service, club),
-                  icon: const Icon(Icons.delete_outline),
-                ),
-              ],
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: AppCard(
+            child: CustomListTile(
+              title: club.name,
+              subtitle: _formatStars(club.stars),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CustomIconButton(
+                    onPressed: () => _edit(service, club),
+                    icon: Icons.edit_outlined,
+                  ),
+                  CustomIconButton(
+                    onPressed: () => _delete(service, club),
+                    icon: Icons.delete_outline,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

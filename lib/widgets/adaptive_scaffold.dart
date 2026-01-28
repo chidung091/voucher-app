@@ -11,7 +11,7 @@ class AdaptiveScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Full list for Tablet/Desktop
-    final allItems = [
+    const allItems = [
       _NavItem(
         label: 'Home',
         title: 'Home',
@@ -74,7 +74,7 @@ class AdaptiveScaffold extends StatelessWidget {
       allItems[3], // Matches
       allItems[4], // Leaderboard
       allItems[6], // Tournament
-      _NavItem(
+      const _NavItem(
         label: 'More',
         title: 'More',
         icon: Icons.menu_outlined,
@@ -116,31 +116,8 @@ class AdaptiveScaffold extends StatelessWidget {
       ],
     );
 
-    // Animated content with smooth transitions
-    final animatedChild = AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
-      switchInCurve: Curves.easeInOut,
-      switchOutCurve: Curves.easeInOut,
-      transitionBuilder: (Widget child, Animation<double> animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0.02, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
-            )),
-            child: child,
-          ),
-        );
-      },
-      child: KeyedSubtree(
-        key: ValueKey<String>(location),
-        child: child,
-      ),
-    );
+    // Standard tab navigation should be instant to avoid ghosting/overlap
+    final animatedChild = child;
 
     return Scaffold(
       appBar: AppBar(

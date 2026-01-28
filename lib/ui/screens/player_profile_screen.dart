@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_theme.dart';
 import '../../domain/player.dart';
 import '../../domain/player_stats.dart';
 import '../../domain/season.dart';
@@ -48,7 +49,8 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
     Season? season;
     try {
       final config = await seasonService.getSeasonConfig();
-      season = seasonService.getCurrentSeason(DateTime.now(), config.seasonType);
+      season =
+          seasonService.getCurrentSeason(DateTime.now(), config.seasonType);
       final leaderboard = await seasonService.getSeasonLeaderboard(
         season.id,
         config.seasonType,
@@ -89,7 +91,7 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
             stats.eloHistory.length - 1 < stats.totalMatches;
 
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
             _HeaderCard(player: view.player, stats: stats),
             const SizedBox(height: 16),
@@ -299,21 +301,40 @@ class _HeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-              child: Text(
-                player.displayName.isNotEmpty
-                    ? player.displayName.substring(0, 1).toUpperCase()
-                    : '?',
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    colorScheme.primary.withOpacity(0.3),
+                    colorScheme.secondary.withOpacity(0.2),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Center(
+                child: Text(
+                  player.displayName.isNotEmpty
+                      ? player.displayName.substring(0, 1).toUpperCase()
+                      : '?',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.lg),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,17 +343,37 @@ class _HeaderCard extends StatelessWidget {
                     player.displayName,
                     style: theme.textTheme.titleLarge,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Skill L${player.skillLevel}',
-                    style: theme.textTheme.bodyMedium,
+                  const SizedBox(height: AppSpacing.xs),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Text(
+                      'Skill L${player.skillLevel}',
+                      style: theme.textTheme.labelSmall,
+                    ),
                   ),
                   if (player.deletedAt != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Deleted',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.error,
+                    const SizedBox(height: AppSpacing.xs),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.error.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Text(
+                        'Deleted',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colorScheme.error,
+                        ),
                       ),
                     ),
                   ],
@@ -343,12 +384,15 @@ class _HeaderCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  'Elo',
-                  style: theme.textTheme.labelMedium,
+                  'Current Elo',
+                  style: theme.textTheme.labelSmall,
                 ),
                 Text(
                   '${stats.currentElo}',
-                  style: theme.textTheme.headlineSmall,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
+                  ),
                 ),
               ],
             ),
@@ -375,7 +419,7 @@ class _SectionCard extends StatelessWidget {
     final theme = Theme.of(context);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -386,7 +430,7 @@ class _SectionCard extends StatelessWidget {
                 if (trailing != null) trailing!,
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             child,
           ],
         ),
@@ -485,7 +529,8 @@ class _EloChart extends StatelessWidget {
           ),
         ],
         titlesData: FlTitlesData(
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           rightTitles:
               const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           leftTitles: AxisTitles(

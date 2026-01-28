@@ -6,6 +6,7 @@ import '../../domain/elo_config.dart';
 import '../../domain/player.dart';
 import '../../domain/player_rating.dart';
 import '../../services/player_service.dart';
+import '../components/components.dart';
 
 class EloResetScreen extends StatefulWidget {
   const EloResetScreen({super.key});
@@ -77,8 +78,8 @@ class _EloResetScreenState extends State<EloResetScreen> {
   Future<void> _confirmAndReset() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset All ELO Ratings'),
+      builder: (context) => CustomDialog(
+        title: 'Reset All ELO Ratings',
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,16 +100,13 @@ class _EloResetScreenState extends State<EloResetScreen> {
           ],
         ),
         actions: [
-          TextButton(
+          SecondaryButton(
+            label: 'Cancel',
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
           ),
-          FilledButton(
+          DangerButton(
+            label: 'Reset',
             onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: const Text('Reset'),
           ),
         ],
       ),
@@ -157,10 +155,10 @@ class _EloResetScreenState extends State<EloResetScreen> {
       appBar: AppBar(
         title: const Text('Reset ELO Ratings'),
         actions: [
-          TextButton.icon(
+          CustomIconButton(
             onPressed: _setAllToDefault,
-            icon: const Icon(Icons.restart_alt),
-            label: Text('All to ${EloConfig.defaultElo}'),
+            icon: Icons.restart_alt,
+            tooltip: 'All to ${EloConfig.defaultElo}',
           ),
         ],
       ),
@@ -208,14 +206,10 @@ class _EloResetScreenState extends State<EloResetScreen> {
                           onResetToCurrent: () => _resetToCurrentElo(player.id),
                         )),
                     const SizedBox(height: 24),
-                    FilledButton.icon(
+                    DangerButton(
+                      label: 'Reset All Ratings',
+                      icon: Icons.restart_alt,
                       onPressed: _confirmAndReset,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                      icon: const Icon(Icons.restart_alt),
-                      label: const Text('Reset All Ratings'),
                     ),
                   ],
                 ),
@@ -263,21 +257,17 @@ class _PlayerEloRow extends StatelessWidget {
             const SizedBox(width: 12),
             SizedBox(
               width: 100,
-              child: TextField(
+              child: CustomTextField(
                 controller: controller,
-                decoration: InputDecoration(
-                  labelText: 'New ELO',
-                  border: const OutlineInputBorder(),
-                  helperText: '${EloConfig.minElo}-${EloConfig.maxElo}',
-                  helperStyle: const TextStyle(fontSize: 10),
-                ),
+                label: 'New ELO',
+                hint: '${EloConfig.minElo}-${EloConfig.maxElo}',
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
             ),
-            IconButton(
+            CustomIconButton(
               onPressed: onResetToCurrent,
-              icon: const Icon(Icons.undo),
+              icon: Icons.undo,
               tooltip: 'Reset to current',
             ),
           ],

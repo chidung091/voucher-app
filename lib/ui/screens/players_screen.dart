@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/app_theme.dart';
 import '../../domain/elo_config.dart';
 import '../../domain/player.dart';
 import '../../domain/player_rating.dart';
 import '../../services/player_service.dart';
+import '../components/components.dart';
 
 class PlayersScreen extends StatefulWidget {
   const PlayersScreen({super.key});
@@ -21,6 +23,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
   late Future<PlayerService> _serviceFuture;
   List<Player> _players = [];
   Map<String, PlayerRating> _ratings = {};
+  bool _isAdding = false;
 
   @override
   void initState() {
@@ -47,6 +50,9 @@ class _PlayersScreenState extends State<PlayersScreen> {
   }
 
   Future<void> _add(PlayerService service) async {
+    if (_nameController.text.trim().isEmpty) return;
+
+    setState(() => _isAdding = true);
     final elo = int.tryParse(_eloController.text) ?? EloConfig.defaultElo;
     try {
       await service.createPlayer(
@@ -57,11 +63,18 @@ class _PlayersScreenState extends State<PlayersScreen> {
       _nameController.clear();
       _eloController.text = EloConfig.defaultElo.toString();
       await _load(service);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Player added successfully!')),
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.toString())),
       );
+    } finally {
+      if (mounted) setState(() => _isAdding = false);
     }
   }
 
@@ -75,35 +88,39 @@ class _PlayersScreenState extends State<PlayersScreen> {
 
     final result = await showDialog<_EditResult>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit player'),
+      builder: (context) => CustomDialog(
+        title: 'Edit Player',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
+            CustomTextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: 'Display name'),
+              label: 'Display name',
             ),
-            const SizedBox(height: 12),
-            TextField(
+            const SizedBox(height: AppSpacing.md),
+            CustomTextField(
               controller: eloController,
-              decoration: InputDecoration(
-                labelText: 'ELO Rating',
-                helperText: '${EloConfig.minElo} - ${EloConfig.maxElo}',
-              ),
+              label: 'ELO Rating',
+              hint: '${EloConfig.minElo} - ${EloConfig.maxElo}',
               keyboardType: TextInputType.number,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<int>(
+            const SizedBox(height: AppSpacing.md),
+            DropdownField<int>(
               value: selectedSkill,
-              decoration: const InputDecoration(labelText: 'Skill level'),
-              items: const [
-                DropdownMenuItem(value: 1, child: Text('1 · Strong')),
-                DropdownMenuItem(value: 2, child: Text('2 · Medium')),
-                DropdownMenuItem(value: 3, child: Text('3 · Beginner')),
-              ],
-              onChanged: (value) {
+              label: 'Skill level',
+              items: const [1, 2, 3],
+              itemBuilder: (value) {
+                switch (value) {
+                  case 1:
+                    return const Text('1 · Strong');
+                  case 2:
+                    return const Text('2 · Medium');
+                  default:
+                    return const Text('3 · Beginner');
+                }
+              },
+              onSelected: (value) {
                 if (value != null) {
                   selectedSkill = value;
                 }
@@ -112,11 +129,12 @@ class _PlayersScreenState extends State<PlayersScreen> {
           ],
         ),
         actions: [
-          TextButton(
+          SecondaryButton(
+            label: 'Cancel',
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
           ),
-          FilledButton(
+          PrimaryButton(
+            label: 'Save',
             onPressed: () => Navigator.of(context).pop(
               _EditResult(
                 nameController.text,
@@ -124,7 +142,6 @@ class _PlayersScreenState extends State<PlayersScreen> {
                 int.tryParse(eloController.text),
               ),
             ),
-            child: const Text('Save'),
           ),
         ],
       ),
@@ -148,8 +165,28 @@ class _PlayersScreenState extends State<PlayersScreen> {
   }
 
   Future<void> _delete(PlayerService service, Player player) async {
-    await service.softDeletePlayer(player.id);
-    await _load(service);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => CustomDialog(
+        title: 'Delete Player?',
+        content: Text('Are you sure you want to delete ${player.displayName}?'),
+        actions: [
+          SecondaryButton(
+            label: 'Cancel',
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          DangerButton(
+            label: 'Delete',
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await service.softDeletePlayer(player.id);
+      await _load(service);
+    }
   }
 
   @override
@@ -162,88 +199,184 @@ class _PlayersScreenState extends State<PlayersScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
-            Text(
-              'Players',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextField(
+            // Add Player Form Section
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.person_add_outlined,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        'Add New Player',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  CustomTextField(
                     controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Player name',
-                      border: OutlineInputBorder(),
-                    ),
+                    label: 'Player name',
+                    prefixIcon: const Icon(Icons.person_outline),
                     onSubmitted: (_) => _add(service),
                   ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 100,
-                  child: TextField(
-                    controller: _eloController,
-                    decoration: const InputDecoration(
-                      labelText: 'ELO',
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    onSubmitted: (_) => _add(service),
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CustomTextField(
+                          controller: _eloController,
+                          label: 'Starting ELO',
+                          prefixIcon: const Icon(Icons.star_outline),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
+                          onSubmitted: (_) => _add(service),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: AppSpacing.xs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: DropdownButton<int>(
+                          value: _skillLevel,
+                          underline: const SizedBox.shrink(),
+                          items: const [
+                            DropdownMenuItem(value: 1, child: Text('L1')),
+                            DropdownMenuItem(value: 2, child: Text('L2')),
+                            DropdownMenuItem(value: 3, child: Text('L3')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _skillLevel = value);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                DropdownButton<int>(
-                  value: _skillLevel,
-                  items: const [
-                    DropdownMenuItem(value: 1, child: Text('L1')),
-                    DropdownMenuItem(value: 2, child: Text('L2')),
-                    DropdownMenuItem(value: 3, child: Text('L3')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => _skillLevel = value);
-                    }
-                  },
-                ),
-                const SizedBox(width: 8),
-                FilledButton(
-                  onPressed: () => _add(service),
-                  child: const Text('Add'),
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.lg),
+                  PrimaryButton(
+                    label: 'Add Player',
+                    icon: Icons.add,
+                    onPressed: () => _add(service),
+                    isLoading: _isAdding,
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
+
+            const SectionHeader(title: 'Players'),
+
+            // Players List
             if (_players.isEmpty)
-              const Text('No players yet.')
+              const EmptyState(
+                icon: Icons.group_outlined,
+                title: 'No players yet',
+                message:
+                    'Add your first player to get started tracking matches.',
+              )
             else
               ..._players.map(
                 (player) {
                   final rating = _ratings[player.id];
                   final eloDisplay = rating?.elo ?? EloConfig.defaultElo;
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      title: Text(player.displayName),
-                      subtitle: Text('ELO: $eloDisplay'),
-                      leading: Chip(
-                        label: Text('L${player.skillLevel}'),
-                      ),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: AppCard(
                       onTap: () => context.go('/players/${player.id}'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.md,
+                      ),
+                      child: Row(
                         children: [
-                          IconButton(
-                            onPressed: () => _edit(service, player),
-                            icon: const Icon(Icons.edit_outlined),
+                          // Skill Level Badge
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: _getSkillColor(player.skillLevel)
+                                  .withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'L${player.skillLevel}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: _getSkillColor(player.skillLevel),
+                                ),
+                              ),
+                            ),
                           ),
-                          IconButton(
+                          const SizedBox(width: AppSpacing.md),
+                          // Player Info
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  player.displayName,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                                Text(
+                                  'ELO: $eloDisplay',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          // ELO Display
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.xs,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: Text(
+                              '$eloDisplay',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          // Actions
+                          CustomIconButton(
+                            onPressed: () => _edit(service, player),
+                            icon: Icons.edit_outlined,
+                            tooltip: 'Edit',
+                          ),
+                          CustomIconButton(
                             onPressed: () => _delete(service, player),
-                            icon: const Icon(Icons.delete_outline),
+                            icon: Icons.delete_outline,
+                            color: Theme.of(context).colorScheme.error,
+                            tooltip: 'Delete',
                           ),
                         ],
                       ),
@@ -251,15 +384,23 @@ class _PlayersScreenState extends State<PlayersScreen> {
                   );
                 },
               ),
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: () => _load(service),
-              child: const Text('Refresh'),
-            ),
           ],
         );
       },
     );
+  }
+
+  Color _getSkillColor(int level) {
+    switch (level) {
+      case 1:
+        return Colors.green;
+      case 2:
+        return Colors.orange;
+      case 3:
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
   }
 }
 
