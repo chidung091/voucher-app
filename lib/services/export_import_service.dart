@@ -7,8 +7,6 @@ import 'package:path_provider/path_provider.dart';
 import '../data/local_store.dart';
 import '../domain/club.dart';
 import '../domain/elo_calculator.dart';
-import '../domain/elo_config.dart';
-import '../domain/enums.dart';
 import '../domain/match.dart';
 import '../domain/player.dart';
 import '../domain/player_rating.dart';

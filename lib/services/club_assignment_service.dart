@@ -3,8 +3,6 @@ import 'dart:math';
 import '../data/local_store.dart';
 import '../domain/club.dart';
 import '../domain/enums.dart';
-import '../domain/tournament_match.dart';
-import '../domain/tournament_team.dart';
 import 'team_elo_calculator.dart';
 
 class MatchupStars {

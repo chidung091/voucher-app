@@ -76,15 +76,24 @@ class TournamentStandingsCalculator {
       matchHistory,
     );
     standings.sort((a, b) {
+      // 1. Points (Descending)
       final points = b.points.compareTo(a.points);
       if (points != 0) return points;
+
+      // 2. Goal Difference (Descending)
       final gd = b.goalDifference.compareTo(a.goalDifference);
       if (gd != 0) return gd;
+
+      // 3. Goals For (Descending)
       final gf = b.goalsFor.compareTo(a.goalsFor);
       if (gf != 0) return gf;
+
+      // 4. Head-to-Head Points (Descending)
       final headToHead = (headToHeadMap[b.teamIndex] ?? 0)
           .compareTo(headToHeadMap[a.teamIndex] ?? 0);
       if (headToHead != 0) return headToHead;
+
+      // 5. Team Index (Ascending - Stability)
       return a.teamIndex.compareTo(b.teamIndex);
     });
     return standings;

@@ -3,7 +3,6 @@ import 'package:uuid/uuid.dart';
 import '../data/local_store.dart';
 import '../domain/elo_calculator.dart';
 import '../domain/enums.dart';
-import '../domain/match.dart';
 import '../domain/tournament.dart';
 import '../domain/tournament_match.dart';
 import '../domain/tournament_standings.dart';
@@ -360,7 +359,7 @@ class TournamentService {
       if (finalMatchToAssign != null) {
         await ClubAssignmentService(_store).assignForTournamentSchedule(
           tournamentId: tournamentId,
-          matchIds: {finalMatchToAssign!},
+          matchIds: {finalMatchToAssign},
         );
       }
 
