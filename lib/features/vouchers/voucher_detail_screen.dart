@@ -188,6 +188,7 @@ class _VoucherImageCarouselState extends State<_VoucherImageCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final images = widget.imageAssets;
     return SizedBox(
       height: 400,
@@ -222,15 +223,13 @@ class _VoucherImageCarouselState extends State<_VoucherImageCarousel> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.15),
+                    color: theme.colorScheme.surface.withOpacity(0.8),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
                     '${_index + 1}/${images.length}',
-                    style: Theme.of(context)
-                        .textTheme
-                        .labelMedium
-                        ?.copyWith(color: Colors.white),
+                    style: theme.textTheme.labelMedium
+                        ?.copyWith(color: theme.colorScheme.onSurface),
                   ),
                 ),
               ),

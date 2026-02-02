@@ -60,8 +60,8 @@ class DropdownField<T> extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(
                 color: enabled
-                    ? Colors.white.withOpacity(0.1)
-                    : Colors.white.withOpacity(0.05),
+                    ? colorScheme.outline.withOpacity(0.2)
+                    : colorScheme.outline.withOpacity(0.1),
               ),
             ),
             child: Row(
@@ -74,13 +74,17 @@ class DropdownField<T> extends StatelessWidget {
                   child: Text(
                     _getDisplayText(value),
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: value != null ? Colors.white : Colors.white38,
+                      color: value != null
+                          ? theme.textTheme.bodyLarge?.color
+                          : theme.textTheme.bodyLarge?.color?.withOpacity(0.38),
                     ),
                   ),
                 ),
                 Icon(
                   Icons.keyboard_arrow_down_rounded,
-                  color: enabled ? Colors.white60 : Colors.white30,
+                  color: enabled
+                      ? theme.textTheme.bodyLarge?.color?.withOpacity(0.6)
+                      : theme.textTheme.bodyLarge?.color?.withOpacity(0.3),
                 ),
               ],
             ),

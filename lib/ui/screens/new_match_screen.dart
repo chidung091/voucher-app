@@ -141,7 +141,8 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -450,7 +451,8 @@ class _ModeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return GestureDetector(
       onTap: onTap,
@@ -475,14 +477,18 @@ class _ModeChip extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: isSelected ? colorScheme.primary : Colors.white60,
+              color: isSelected
+                  ? colorScheme.primary
+                  : theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
             ),
             const SizedBox(width: AppSpacing.sm),
             Text(
               label,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: isSelected ? colorScheme.primary : Colors.white60,
+                color: isSelected
+                    ? colorScheme.primary
+                    : theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
               ),
             ),
           ],
@@ -507,7 +513,8 @@ class _RatingChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return GestureDetector(
       onTap: onTap,
@@ -533,7 +540,9 @@ class _RatingChip extends StatelessWidget {
               label,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: isSelected ? colorScheme.secondary : Colors.white60,
+                color: isSelected
+                    ? colorScheme.secondary
+                    : theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
               ),
             ),
             Text(
@@ -542,7 +551,7 @@ class _RatingChip extends StatelessWidget {
                 fontSize: 11,
                 color: isSelected
                     ? colorScheme.secondary.withOpacity(0.8)
-                    : Colors.white38,
+                    : theme.textTheme.bodySmall?.color?.withOpacity(0.38),
               ),
             ),
           ],

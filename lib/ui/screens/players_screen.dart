@@ -194,6 +194,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
     return FutureBuilder<PlayerService>(
       future: _serviceFuture,
       builder: (context, snapshot) {
+        final theme = Theme.of(context);
         final service = snapshot.data;
         if (service == null) {
           return const Center(child: CircularProgressIndicator());
@@ -254,12 +255,22 @@ class _PlayersScreenState extends State<PlayersScreen> {
                           borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                         child: DropdownButton<int>(
+                          dropdownColor: theme.colorScheme.surface,
                           value: _skillLevel,
                           underline: const SizedBox.shrink(),
-                          items: const [
-                            DropdownMenuItem(value: 1, child: Text('L1')),
-                            DropdownMenuItem(value: 2, child: Text('L2')),
-                            DropdownMenuItem(value: 3, child: Text('L3')),
+                          items: [
+                            DropdownMenuItem(
+                                value: 1,
+                                child: Text('L1',
+                                    style: theme.textTheme.bodyMedium)),
+                            DropdownMenuItem(
+                                value: 2,
+                                child: Text('L2',
+                                    style: theme.textTheme.bodyMedium)),
+                            DropdownMenuItem(
+                                value: 3,
+                                child: Text('L3',
+                                    style: theme.textTheme.bodyMedium)),
                           ],
                           onChanged: (value) {
                             if (value != null) {
@@ -320,7 +331,8 @@ class _PlayersScreenState extends State<PlayersScreen> {
                                 'L${player.skillLevel}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: _getSkillColor(player.skillLevel),
+                                  color: _getSkillColor(player.skillLevel)
+                                      .withOpacity(1.0),
                                 ),
                               ),
                             ),

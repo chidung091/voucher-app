@@ -62,7 +62,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -161,7 +162,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         const SizedBox(width: AppSpacing.sm),
                         Icon(
                           Icons.chevron_right,
-                          color: Colors.white38,
+                          color: theme.textTheme.bodySmall?.color
+                              ?.withOpacity(0.38),
                         ),
                       ],
                     ),
@@ -180,6 +182,7 @@ class _RankBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     Color badgeColor;
     IconData? icon;
 
@@ -197,7 +200,7 @@ class _RankBadge extends StatelessWidget {
         icon = Icons.emoji_events;
         break;
       default:
-        badgeColor = Colors.white24;
+        badgeColor = theme.colorScheme.outline.withOpacity(0.5);
         icon = null;
     }
 
@@ -218,7 +221,7 @@ class _RankBadge extends StatelessWidget {
                 '#$rank',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white70,
+                  color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
                 ),
               ),
       ),
@@ -239,6 +242,7 @@ class _MiniStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -256,7 +260,7 @@ class _MiniStat extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: Colors.white70,
+            color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
           ),
         ),
       ],

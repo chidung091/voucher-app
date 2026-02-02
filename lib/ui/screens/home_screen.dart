@@ -194,6 +194,7 @@ class _ActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       child: InkWell(
@@ -234,7 +235,7 @@ class _ActionCard extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right,
-                color: Colors.white38,
+                color: theme.textTheme.bodySmall?.color?.withOpacity(0.38),
               ),
             ],
           ),
