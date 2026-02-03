@@ -1,4 +1,4 @@
-/// Reusable UI components for FC Match Tracker
+/// Reusable UI components for minma league
 library;
 
 export 'app_card.dart';

@@ -102,7 +102,7 @@ class AdaptiveScaffold extends StatelessWidget {
 
     final pageTitle = selectedIndex < activeItems.length
         ? activeItems[selectedIndex].title
-        : 'FC Match Tracker';
+        : 'minma league';
 
     final rail = NavigationRail(
       selectedIndex: selectedIndex,

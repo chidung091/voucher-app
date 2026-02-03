@@ -1,6 +1,6 @@
 {
-    "name": "voucher_app",
-    "short_name": "voucher_app",
+    "name": "minma league",
+    "short_name": "minma league",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

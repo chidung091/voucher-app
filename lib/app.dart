@@ -15,7 +15,7 @@ class VoucherApp extends ConsumerWidget {
     const themeMode = ThemeMode.light;
 
     return MaterialApp.router(
-      title: 'FC Match Tracker',
+      title: 'minma league',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,

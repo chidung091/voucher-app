@@ -7,6 +7,6 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: VoucherApp()));
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('FC Match Tracker'), findsOneWidget);
+    expect(find.text('minma league'), findsOneWidget);
   });
 }
