@@ -190,7 +190,7 @@ class TournamentService {
     final history = await _store.getMatches();
     final standings = TournamentStandingsCalculator().compute(
       teams: teams,
-      matches: matches,
+      matches: matches.where((m) => m.tournamentId == id).toList(),
       matchHistory: history,
     );
     return TournamentView(
@@ -308,7 +308,8 @@ class TournamentService {
           tournament.status == TournamentStatus.group) {
         final standings = TournamentStandingsCalculator().compute(
           teams: tournamentTeams,
-          matches: matches,
+          matches:
+              matches.where((m) => m.tournamentId == tournamentId).toList(),
           matchHistory: storeMatches,
         );
         if (tournament.finalsEnabled) {
