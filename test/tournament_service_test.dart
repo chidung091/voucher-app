@@ -30,7 +30,8 @@ void main() {
 
     final groupMatches =
         tournament.matches.where((m) => m.stage == TournamentStage.group);
-    final group = groupMatches.toList()..sort((a, b) => a.scheduledOrder - b.scheduledOrder);
+    final group = groupMatches.toList()
+      ..sort((a, b) => a.scheduledOrder - b.scheduledOrder);
 
     await service.recordTournamentMatchResult(
       tournamentId: tournament.tournament.id,
@@ -85,7 +86,8 @@ void main() {
 
     final groupMatches =
         tournament.matches.where((m) => m.stage == TournamentStage.group);
-    final group = groupMatches.toList()..sort((a, b) => a.scheduledOrder - b.scheduledOrder);
+    final group = groupMatches.toList()
+      ..sort((a, b) => a.scheduledOrder - b.scheduledOrder);
 
     await service.recordTournamentMatchResult(
       tournamentId: tournament.tournament.id,
@@ -139,5 +141,95 @@ void main() {
     );
 
     expect(updated.tournament.finalsEnabled, false);
+  });
+  test('Rankings are isolated between tournaments', () async {
+    SharedPreferences.setMockInitialValues({});
+    LocalStore.resetForTest();
+
+    final playerService = await PlayerService.create();
+    final p1 = await playerService.createPlayer('Player 1');
+    final p2 = await playerService.createPlayer('Player 2');
+    final p3 = await playerService.createPlayer('Player 3');
+
+    final service = await TournamentService.create();
+
+    // Create Tournament A
+    final viewA = await service.createTournament(TournamentInput(
+      name: 'Tournament A',
+      mode: MatchMode.oneVOne,
+      finalsEnabled: false,
+      teams: [
+        TournamentTeamInput(name: 'Team A0', playerIds: [p1.id]),
+        TournamentTeamInput(name: 'Team A1', playerIds: [p2.id]),
+        TournamentTeamInput(name: 'Team A2', playerIds: [p3.id]),
+      ],
+    ));
+
+    // Create Tournament B (Same players)
+    final viewB = await service.createTournament(TournamentInput(
+      name: 'Tournament B',
+      mode: MatchMode.oneVOne,
+      finalsEnabled: false,
+      teams: [
+        TournamentTeamInput(name: 'Team B0', playerIds: [p1.id]),
+        TournamentTeamInput(name: 'Team B1', playerIds: [p2.id]),
+        TournamentTeamInput(name: 'Team B2', playerIds: [p3.id]),
+      ],
+    ));
+
+    // Tournament A: Team 0 wins everything
+    final matchesA =
+        viewA.matches.where((m) => m.stage == TournamentStage.group).toList();
+    for (final match in matchesA) {
+      if (match.homeTeamIndex == 0 || match.awayTeamIndex == 0) {
+        // Team 0 wins
+        await service.recordTournamentMatchResult(
+          tournamentId: viewA.tournament.id,
+          tournamentMatchId: match.id,
+          scoreHome: match.homeTeamIndex == 0 ? 10 : 0,
+          scoreAway: match.awayTeamIndex == 0 ? 10 : 0,
+        );
+      } else {
+        // Others draw
+        await service.recordTournamentMatchResult(
+          tournamentId: viewA.tournament.id,
+          tournamentMatchId: match.id,
+          scoreHome: 0,
+          scoreAway: 0,
+        );
+      }
+    }
+
+    final updatedA = await service.getTournament(viewA.tournament.id);
+    expect(updatedA.tournament.championTeamIndex, 0);
+
+    // Tournament B: Team 2 wins everything
+    final matchesB =
+        viewB.matches.where((m) => m.stage == TournamentStage.group).toList();
+    for (final match in matchesB) {
+      if (match.homeTeamIndex == 2 || match.awayTeamIndex == 2) {
+        // Team 2 wins
+        await service.recordTournamentMatchResult(
+          tournamentId: viewB.tournament.id,
+          tournamentMatchId: match.id,
+          scoreHome: match.homeTeamIndex == 2 ? 10 : 0,
+          scoreAway: match.awayTeamIndex == 2 ? 10 : 0,
+        );
+      } else {
+        // Others draw
+        await service.recordTournamentMatchResult(
+          tournamentId: viewB.tournament.id,
+          tournamentMatchId: match.id,
+          scoreHome: 0,
+          scoreAway: 0,
+        );
+      }
+    }
+
+    // Verify Tournament B results are not polluted by Tournament A
+    final updatedB = await service.getTournament(viewB.tournament.id);
+    expect(updatedB.tournament.championTeamIndex, 2,
+        reason:
+            'Team 2 should win Tournament B independent of Team 0 winning Tournament A');
   });
 }
