@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -33,27 +34,32 @@ GoRouter buildRouter(Ref ref) {
           GoRoute(
             path: '/home',
             name: 'home',
-            builder: (context, state) => const HomeScreen(),
+            pageBuilder: (context, state) =>
+                _navigationPage(state, const HomeScreen()),
           ),
           GoRoute(
             path: '/players',
             name: 'players',
-            builder: (context, state) => const PlayersScreen(),
+            pageBuilder: (context, state) =>
+                _navigationPage(state, const PlayersScreen()),
           ),
           GoRoute(
             path: '/clubs',
             name: 'clubs',
-            builder: (context, state) => const ClubsScreen(),
+            pageBuilder: (context, state) =>
+                _navigationPage(state, const ClubsScreen()),
           ),
           GoRoute(
             path: '/h2h',
             name: 'head-to-head',
-            builder: (context, state) => const HeadToHeadScreen(),
+            pageBuilder: (context, state) =>
+                _navigationPage(state, const HeadToHeadScreen()),
           ),
           GoRoute(
             path: '/seasons',
             name: 'seasons',
-            builder: (context, state) => const SeasonsScreen(),
+            pageBuilder: (context, state) =>
+                _navigationPage(state, const SeasonsScreen()),
           ),
           GoRoute(
             path: '/players/:id',
@@ -66,22 +72,26 @@ GoRouter buildRouter(Ref ref) {
           GoRoute(
             path: '/matches/new',
             name: 'new-match',
-            builder: (context, state) => const NewMatchScreen(),
+            pageBuilder: (context, state) =>
+                _navigationPage(state, const NewMatchScreen()),
           ),
           GoRoute(
             path: '/leaderboard',
             name: 'leaderboard',
-            builder: (context, state) => const LeaderboardScreen(),
+            pageBuilder: (context, state) =>
+                _navigationPage(state, const LeaderboardScreen()),
           ),
           GoRoute(
             path: '/tournaments',
             name: 'tournaments',
-            builder: (context, state) => const TournamentScreen(),
+            pageBuilder: (context, state) =>
+                _navigationPage(state, const TournamentScreen()),
           ),
           GoRoute(
             path: '/settings',
             name: 'settings',
-            builder: (context, state) => const SettingsScreen(),
+            pageBuilder: (context, state) =>
+                _navigationPage(state, const SettingsScreen()),
           ),
           GoRoute(
             path: '/settings/data',
@@ -96,7 +106,8 @@ GoRouter buildRouter(Ref ref) {
           GoRoute(
             path: '/more',
             name: 'more',
-            builder: (context, state) => const MoreScreen(),
+            pageBuilder: (context, state) =>
+                _navigationPage(state, const MoreScreen()),
           ),
         ],
       ),
@@ -109,5 +120,12 @@ GoRouter buildRouter(Ref ref) {
         onRetry: () => context.go('/home'),
       );
     },
+  );
+}
+
+Page<void> _navigationPage(GoRouterState state, Widget child) {
+  return NoTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
   );
 }

@@ -200,10 +200,10 @@ class MatchService {
     } else {
       final allowMixed = input.tournamentId != null;
       final sideAOk = allowMixed
-          ? input.sideAPlayerIds.length >= 1 && input.sideAPlayerIds.length <= 2
+          ? input.sideAPlayerIds.isNotEmpty && input.sideAPlayerIds.length <= 2
           : input.sideAPlayerIds.length == 2;
       final sideBOk = allowMixed
-          ? input.sideBPlayerIds.length >= 1 && input.sideBPlayerIds.length <= 2
+          ? input.sideBPlayerIds.isNotEmpty && input.sideBPlayerIds.length <= 2
           : input.sideBPlayerIds.length == 2;
       if (!sideAOk || !sideBOk) {
         if (allowMixed) {

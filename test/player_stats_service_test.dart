@@ -10,7 +10,7 @@ import 'package:voucher_app/domain/rating_event.dart';
 import 'package:voucher_app/services/player_stats_service.dart';
 
 void main() {
-  Future<LocalStore> _seedBasicPlayers() async {
+  Future<LocalStore> seedBasicPlayers() async {
     SharedPreferences.setMockInitialValues({});
     LocalStore.resetForTest();
     final store = await LocalStore.getInstance();
@@ -60,7 +60,7 @@ void main() {
   }
 
   test('1v1 series computes totals, goals, and streaks', () async {
-    final store = await _seedBasicPlayers();
+    final store = await seedBasicPlayers();
     final base = DateTime(2024, 1, 1, 10, 0);
     await store.saveMatches([
       Match(
@@ -116,7 +116,7 @@ void main() {
   });
 
   test('2v2 results account for side A and side B correctly', () async {
-    final store = await _seedBasicPlayers();
+    final store = await seedBasicPlayers();
     final base = DateTime(2024, 2, 1, 10, 0);
     await store.saveMatches([
       Match(
@@ -155,7 +155,7 @@ void main() {
   });
 
   test('draws reset streaks', () async {
-    final store = await _seedBasicPlayers();
+    final store = await seedBasicPlayers();
     final base = DateTime(2024, 3, 1, 10, 0);
     await store.saveMatches([
       Match(
@@ -225,7 +225,7 @@ void main() {
   });
 
   test('elo history uses rating events and computes extremes', () async {
-    final store = await _seedBasicPlayers();
+    final store = await seedBasicPlayers();
     final base = DateTime(2024, 4, 1, 10, 0);
     await store.saveMatches([
       Match(
@@ -306,7 +306,7 @@ void main() {
 
   test('stats cache returns cached values and invalidates on match changes',
       () async {
-    final store = await _seedBasicPlayers();
+    final store = await seedBasicPlayers();
     final base = DateTime(2024, 5, 1, 10, 0);
     final match1 = Match(
       id: 'm1',

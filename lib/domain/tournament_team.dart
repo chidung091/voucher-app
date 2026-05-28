@@ -6,7 +6,7 @@ class TournamentTeam {
     required this.name,
     required this.playerIds,
   }) {
-    if (playerIds.length < 1 || playerIds.length > 2) {
+    if (playerIds.isEmpty || playerIds.length > 2) {
       throw ArgumentError('TournamentTeam must have 1 or 2 players.');
     }
   }

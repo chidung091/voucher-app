@@ -47,7 +47,7 @@ class _HeadToHeadScreenState extends State<HeadToHeadScreen> {
 
   void _initSelections(List<Player> players) {
     if (players.isEmpty) return;
-    if (_playerA == null && players.length >= 1) {
+    if (_playerA == null && players.isNotEmpty) {
       _playerA = players[0].id;
     }
     if (_playerB == null && players.length >= 2) {
@@ -177,7 +177,10 @@ class _HeadToHeadScreenState extends State<HeadToHeadScreen> {
         ),
         if (_error1v1 != null) ...[
           const SizedBox(height: 8),
-          Text(_error1v1!, style: const TextStyle(color: Colors.red)),
+          Text(
+            _error1v1!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
         ],
         const SizedBox(height: 16),
         _buildStatsSection(_h2h1v1Future),
@@ -253,7 +256,10 @@ class _HeadToHeadScreenState extends State<HeadToHeadScreen> {
         ),
         if (_error2v2 != null) ...[
           const SizedBox(height: 8),
-          Text(_error2v2!, style: const TextStyle(color: Colors.red)),
+          Text(
+            _error2v2!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
         ],
         const SizedBox(height: 16),
         _buildStatsSection(_h2h2v2Future),
@@ -384,7 +390,9 @@ class _HeadToHeadScreenState extends State<HeadToHeadScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
             child: const Text('Delete'),
           ),
         ],

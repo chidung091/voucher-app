@@ -1,4 +1,4 @@
-/// Reusable UI components for minma league
+/// Reusable UI components for MinmaFC.
 library;
 
 export 'app_card.dart';

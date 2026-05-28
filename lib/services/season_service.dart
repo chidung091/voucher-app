@@ -189,7 +189,7 @@ class SeasonService {
   }
 
   Future<void> invalidateSeasonCacheForMatch(Match match) async {
-    final seasonTypes = SeasonType.values;
+    const seasonTypes = SeasonType.values;
     for (final type in seasonTypes) {
       final season = getSeasonForDate(match.playedAt, type);
       await _store.removeSeasonCache(_cacheKey(type, season.id));

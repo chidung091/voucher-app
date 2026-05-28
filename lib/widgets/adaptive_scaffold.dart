@@ -102,7 +102,7 @@ class AdaptiveScaffold extends StatelessWidget {
 
     final pageTitle = selectedIndex < activeItems.length
         ? activeItems[selectedIndex].title
-        : 'minma league';
+        : 'MinmaFC';
 
     final rail = NavigationRail(
       selectedIndex: selectedIndex,
@@ -116,9 +116,6 @@ class AdaptiveScaffold extends StatelessWidget {
       ],
     );
 
-    // Standard tab navigation should be instant to avoid ghosting/overlap
-    final animatedChild = child;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(pageTitle),
@@ -128,15 +125,15 @@ class AdaptiveScaffold extends StatelessWidget {
               children: [
                 rail,
                 const VerticalDivider(width: 1),
-                Expanded(child: animatedChild),
+                Expanded(child: child),
               ],
             )
-          : animatedChild,
+          : child,
       bottomNavigationBar: isTablet
           ? null
           : NavigationBar(
               selectedIndex: selectedIndex,
-              animationDuration: const Duration(milliseconds: 400),
+              animationDuration: const Duration(milliseconds: 250),
               onDestinationSelected: (index) =>
                   context.go(activeItems[index].route),
               destinations: [

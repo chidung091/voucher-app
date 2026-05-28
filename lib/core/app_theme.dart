@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// Design tokens for consistent spacing
@@ -19,17 +20,19 @@ class AppRadius {
   static const double full = 999;
 }
 
-class AppTheme {
-  // Light theme colors (existing)
-  static const _lightPrimaryColor = Color(0xFFF075AE); // Pink
-  static const _lightSecondaryColor = Color(0xFF9BC264); // Green
-  static const _lightTertiaryColor = Color(0xFFF7DB91); // Yellow
-  static const _lightSurfaceColor = Color(0xFFFFFDCE); // Cream
+/// Brand palette shared by themes and themed UI components.
+abstract final class AppColors {
+  static const neutral = Color(0xFFEEEEEE);
+  static const mint = Color(0xFF6FCF97);
+  static const teal = Color(0xFF2FA084);
+  static const deepTeal = Color(0xFF1F6F5F);
+}
 
-  // Dark theme colors (sporty football vibe)
-  static const _darkPrimaryColor = Color(0xFF00C853); // Vibrant green
-  static const _darkSecondaryColor = Color(0xFFFFD600); // Amber/Gold
-  static const _darkTertiaryColor = Color(0xFF00B0FF); // Accent blue
+class AppTheme {
+  // Dark surfaces retain contrast while using brand colors for interaction.
+  static const _darkPrimaryColor = AppColors.mint;
+  static const _darkSecondaryColor = AppColors.teal;
+  static const _darkTertiaryColor = AppColors.deepTeal;
   static const _darkBackgroundColor = Color(0xFF0D1117); // Near-black
   static const _darkSurfaceColor = Color(0xFF161B22); // Elevated surface
   static const _darkSurfaceHighColor = Color(0xFF21262D); // Higher elevation
@@ -37,23 +40,32 @@ class AppTheme {
 
   static ThemeData get lightTheme {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: _lightPrimaryColor,
+      seedColor: AppColors.deepTeal,
       brightness: Brightness.light,
     ).copyWith(
-      primary: _lightPrimaryColor,
-      secondary: _lightSecondaryColor,
-      tertiary: _lightTertiaryColor,
-      surface: _lightSurfaceColor,
+      primary: AppColors.deepTeal,
+      onPrimary: Colors.white,
+      primaryContainer: AppColors.mint,
+      onPrimaryContainer: AppColors.deepTeal,
+      secondary: AppColors.teal,
+      onSecondary: Colors.black87,
+      secondaryContainer: AppColors.mint,
+      onSecondaryContainer: AppColors.deepTeal,
+      tertiary: AppColors.mint,
+      onTertiary: AppColors.deepTeal,
+      surface: AppColors.neutral,
+      onSurface: AppColors.deepTeal,
     );
-
     return ThemeData(
       colorScheme: colorScheme,
       useMaterial3: true,
+      scaffoldBackgroundColor: AppColors.neutral,
       // Custom App Bar "Detached"
       appBarTheme: const AppBarTheme(
         centerTitle: true,
         titleSpacing: 16,
-        backgroundColor: _lightSurfaceColor,
+        backgroundColor: AppColors.neutral,
+        foregroundColor: AppColors.deepTeal,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(bottom: Radius.circular(24))),
         scrolledUnderElevation: 4,
@@ -61,8 +73,8 @@ class AppTheme {
       ),
       // Custom FAB "Sticker Pop"
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: _lightTertiaryColor,
-        foregroundColor: Colors.black87,
+        backgroundColor: AppColors.mint,
+        foregroundColor: AppColors.deepTeal,
         elevation: 6,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         largeSizeConstraints:
@@ -70,21 +82,21 @@ class AppTheme {
       ),
       // Custom Dialog "Soft Card"
       dialogTheme: DialogTheme(
-        backgroundColor: _lightSurfaceColor,
+        backgroundColor: AppColors.neutral,
         elevation: 8,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         titleTextStyle: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: _lightPrimaryColor),
+            color: AppColors.deepTeal),
       ),
       // Custom Chips "Soft Rect"
       chipTheme: ChipThemeData(
-        backgroundColor: _lightSurfaceColor,
-        selectedColor: _lightSecondaryColor,
-        secondarySelectedColor: _lightSecondaryColor,
-        labelStyle: const TextStyle(color: Colors.black87),
-        secondaryLabelStyle: const TextStyle(color: Colors.white),
+        backgroundColor: AppColors.neutral,
+        selectedColor: AppColors.mint,
+        secondarySelectedColor: AppColors.mint,
+        labelStyle: const TextStyle(color: AppColors.deepTeal),
+        secondaryLabelStyle: const TextStyle(color: AppColors.deepTeal),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide.none,
@@ -95,7 +107,7 @@ class AppTheme {
       // Custom Tab Bar "Pill"
       tabBarTheme: TabBarTheme(
         indicator: BoxDecoration(
-          color: _lightPrimaryColor,
+          color: AppColors.deepTeal,
           borderRadius: BorderRadius.circular(50),
         ),
         labelColor: Colors.white,
@@ -106,7 +118,7 @@ class AppTheme {
       // Custom Dropdown Menu (M3) "Soft Pop"
       dropdownMenuTheme: DropdownMenuThemeData(
         menuStyle: MenuStyle(
-          backgroundColor: WidgetStateProperty.all(_lightSurfaceColor),
+          backgroundColor: WidgetStateProperty.all(AppColors.neutral),
           surfaceTintColor: WidgetStateProperty.all(Colors.transparent),
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -122,16 +134,16 @@ class AppTheme {
             const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: _lightSecondaryColor),
+          borderSide: const BorderSide(color: AppColors.teal),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(
-              color: _lightSecondaryColor.withOpacity(0.5), width: 1.5),
+          borderSide:
+              BorderSide(color: AppColors.teal.withOpacity(0.5), width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: _lightPrimaryColor, width: 2.5),
+          borderSide: const BorderSide(color: AppColors.deepTeal, width: 2.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -155,7 +167,7 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side:
-              BorderSide(color: _lightPrimaryColor.withOpacity(0.1), width: 1),
+              BorderSide(color: AppColors.deepTeal.withOpacity(0.1), width: 1),
         ),
         clipBehavior: Clip.antiAlias,
       ),
@@ -165,10 +177,11 @@ class AppTheme {
         labelTextStyle: WidgetStateProperty.all(
           const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
         ),
-        backgroundColor: _lightSurfaceColor,
-        indicatorColor: _lightSecondaryColor.withOpacity(0.5),
-        iconTheme:
-            WidgetStateProperty.all(const IconThemeData(color: Colors.black87)),
+        backgroundColor: AppColors.neutral,
+        indicatorColor: AppColors.mint,
+        iconTheme: WidgetStateProperty.all(
+          const IconThemeData(color: AppColors.deepTeal),
+        ),
       ),
       dividerTheme: const DividerThemeData(
         thickness: 1,
@@ -192,6 +205,9 @@ class AppTheme {
       onError: Colors.black,
       surfaceContainerHighest: _darkSurfaceHighColor,
     );
+    final listTileTextTheme = Typography.material2021(
+      platform: defaultTargetPlatform,
+    ).white;
 
     return ThemeData(
       colorScheme: colorScheme,
@@ -230,7 +246,7 @@ class AppTheme {
       ),
 
       // App Bar
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         centerTitle: true,
         titleSpacing: AppSpacing.lg,
         backgroundColor: _darkSurfaceColor,
@@ -238,7 +254,7 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 4,
         shadowColor: Colors.black45,
-        titleTextStyle: const TextStyle(
+        titleTextStyle: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -404,12 +420,14 @@ class AppTheme {
         ),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md)),
-        titleTextStyle: const TextStyle(
+        titleTextStyle: listTileTextTheme.bodyLarge?.copyWith(
+          inherit: false,
           fontSize: 16,
           fontWeight: FontWeight.w500,
           color: Colors.white,
         ),
-        subtitleTextStyle: const TextStyle(
+        subtitleTextStyle: listTileTextTheme.bodyMedium?.copyWith(
+          inherit: false,
           fontSize: 13,
           color: Colors.white60,
         ),
@@ -465,8 +483,9 @@ class AppTheme {
           return Colors.white60;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected))
+          if (states.contains(WidgetState.selected)) {
             return _darkPrimaryColor.withOpacity(0.3);
+          }
           return Colors.white.withOpacity(0.1);
         }),
       ),
@@ -481,13 +500,13 @@ class AppTheme {
       ),
 
       // Bottom Sheet
-      bottomSheetTheme: BottomSheetThemeData(
+      bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: _darkSurfaceColor,
-        shape: const RoundedRectangleBorder(
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         dragHandleColor: Colors.white24,
-        dragHandleSize: const Size(40, 4),
+        dragHandleSize: Size(40, 4),
       ),
 
       // Icon Theme

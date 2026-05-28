@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="orange" cx="50%" cy="42%" r="74%">
+      <stop offset="0%" stop-color="#ff7e32"/>
+      <stop offset="70%" stop-color="#ff5a10"/>
+      <stop offset="100%" stop-color="#f44a00"/>
+    </radialGradient>
+    <radialGradient id="ball" cx="35%" cy="24%" r="75%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e3e3e3"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#orange)"/>
+  <path fill="none" stroke="#fff" stroke-width="54" stroke-linecap="round" stroke-linejoin="round"
+    d="M535 625c-48-10-79-48-76-98 3-58 48-91 102-90 78 4 155 8 206-12 23-9 31-26 26-51l-24-125c-7-35-32-54-68-52-193 16-347 84-438 194-70 85-82 194-35 278 49 90 146 132 282 140 89 5 165-4 226-23"/>
+  <circle cx="575" cy="319" r="30" fill="#fff"/>
+  <circle cx="677" cy="319" r="30" fill="#fff"/>
+  <circle cx="698" cy="654" r="117" fill="url(#ball)" stroke="#fff" stroke-width="12"/>
+  <g stroke="#303030" stroke-width="5" stroke-linejoin="round">
+    <path fill="#232323" d="M698 606l38 28-14 45h-48l-14-45z"/>
+    <path fill="#232323" d="M676 541h44l23 32-22 27h-46l-22-27z"/>
+    <path fill="#232323" d="M586 632l25-32 32 15 7 43-30 23-34-19z"/>
+    <path fill="#232323" d="M786 600l25 32v30l-34 19-30-23 7-43z"/>
+    <path fill="#232323" d="M670 707h56l23 29-27 25h-48l-27-25z"/>
+    <path fill="none" d="M675 600l-15 34m76 0l-15-34m-61 34l-17-19m93 19l18-19m-80 64l-4 28m52-28l4 28m-76-49l-30 23m137-23l30 23"/>
+  </g>
+</svg>

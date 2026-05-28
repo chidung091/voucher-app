@@ -60,7 +60,7 @@ class PlayerStatsService {
     final totals = _computeTotals(playerId, playerMatches);
     final streaks = _computeStreaks(playerId, playerMatches);
 
-    final initialElo = EloConfig.defaultElo;
+    const initialElo = EloConfig.defaultElo;
     final eloHistory = playerEvents.isNotEmpty
         ? _buildHistoryFromEvents(
             player,

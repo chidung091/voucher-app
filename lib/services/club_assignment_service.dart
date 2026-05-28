@@ -41,33 +41,41 @@ class ClubAssignmentService {
     final weakBase = baseStars(rank: rankWeak, teamCount: teamCount);
     final baseline = roundToStep((strongBase + weakBase) / 2, step);
 
-    // When ELO difference is very small (<50), both teams get equal stars
-    // This handles the case where teams have similar strength
-    final isCloseMatch = eloDiff != null && eloDiff.abs() < 50;
-
-    if (isCloseMatch) {
-      // Both teams get baseline stars (equal match)
+    // Preserve an even matchup only for teams with the same effective Elo.
+    // Any measured gap receives at least one available club-star step.
+    if (eloDiff != null && eloDiff == 0) {
       final equalStars =
           roundToStep(baseline, step).clamp(1.0, maxStar).toDouble();
       return MatchupStars(strongStars: equalStars, weakStars: equalStars);
     }
 
     // Dynamic spread based on Elo difference only (no solo handicap)
-    // If undefined or small (<60), use 0.25 (total 0.5 gap).
-    // If larger, scale up: ~100 elo -> 0.5 spread (total 1.0 gap).
-    double spread = 0.25;
+    // An unspecified or small non-zero gap requests one 0.5 star distinction.
+    double spread = step / 2;
     if (eloDiff != null) {
-      // 1 full star gap (0.5 spread) per 100 elo
-      final calculated = (eloDiff.abs() / 200.0);
-      // Ensure at least 0.25 spread (0.5 gap) to differentiate ranks
-      spread = max(0.25, calculated);
+      final absoluteDiff = eloDiff.abs();
+      final calculated = absoluteDiff / 200.0;
+      // At 50 Elo and above, retain at least a full one-star rounded gap.
+      spread = absoluteDiff >= 50
+          ? max(step, calculated)
+          : max(step / 2, calculated);
     }
 
     final strongRaw = baseline - spread;
     final weakRaw = baseline + spread;
 
-    final strong = roundToStep(strongRaw, step).clamp(1.0, maxStar).toDouble();
-    final weak = roundToStep(weakRaw, step).clamp(1.0, maxStar).toDouble();
+    var strong = roundToStep(strongRaw, step).clamp(1.0, maxStar).toDouble();
+    var weak = roundToStep(weakRaw, step).clamp(1.0, maxStar).toDouble();
+
+    // Rounding at the 5-star ceiling can erase a legitimate small handicap.
+    // Keep the weaker side higher; reduce the strong side if the weak side is capped.
+    if (strong >= weak) {
+      if (weak == maxStar) {
+        strong = (weak - step).clamp(1.0, maxStar).toDouble();
+      } else {
+        weak = (strong + step).clamp(1.0, maxStar).toDouble();
+      }
+    }
 
     return MatchupStars(strongStars: strong, weakStars: weak);
   }

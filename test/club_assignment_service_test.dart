@@ -4,6 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:voucher_app/data/local_store.dart';
 import 'package:voucher_app/domain/club.dart';
+import 'package:voucher_app/domain/enums.dart';
+import 'package:voucher_app/domain/player.dart';
+import 'package:voucher_app/domain/player_rating.dart';
+import 'package:voucher_app/domain/tournament.dart';
+import 'package:voucher_app/domain/tournament_match.dart';
+import 'package:voucher_app/domain/tournament_team.dart';
 import 'package:voucher_app/services/club_assignment_service.dart';
 import 'package:voucher_app/services/club_service.dart';
 
@@ -97,19 +103,17 @@ void main() {
     expect(stars.weakStars, 5.0);
   });
 
-  test('matchupStars gives equal stars for close elo (<50)', () {
-    // When eloDiff < 50, both teams get equal stars (baseline)
-    // Baseline 4.5. Both teams get 4.5.
+  test('matchupStars distinguishes a non-zero small elo gap', () {
     final stars = ClubAssignmentService.matchupStars(
       rankStrong: 1,
       rankWeak: 2,
       teamCount: 3,
       teamSizeStrong: 2,
       teamSizeWeak: 2,
-      eloDiff: 36, // < 50, so equal stars
+      eloDiff: 25,
     );
     expect(stars.strongStars, 4.5);
-    expect(stars.weakStars, 4.5); // Equal because close match
+    expect(stars.weakStars, 5.0);
   });
 
   test('matchupStars dynamic spread for huge elo diff', () {
@@ -129,19 +133,131 @@ void main() {
     expect(stars.weakStars, 5.0);
   });
 
-  test('matchupStars gives equal stars for user example (diff 36 < 50)', () {
-    // User Example: Team 2 (2055) vs Team 3 (2019). Diff 36.
-    // Since diff < 50, both teams get equal stars.
+  test('matchupStars differentiates the three-team scenario at the cap', () {
+    final middleVsWeak = ClubAssignmentService.matchupStars(
+      rankStrong: 2,
+      rankWeak: 3,
+      teamCount: 3,
+      teamSizeStrong: 2,
+      teamSizeWeak: 2,
+      eloDiff: 25,
+    );
+    expect(middleVsWeak.strongStars, 4.5);
+    expect(middleVsWeak.weakStars, 5.0);
+
+    final strongVsMiddle = ClubAssignmentService.matchupStars(
+      rankStrong: 1,
+      rankWeak: 2,
+      teamCount: 3,
+      teamSizeStrong: 2,
+      teamSizeWeak: 2,
+      eloDiff: 25,
+    );
+    expect(strongVsMiddle.strongStars, 4.5);
+    expect(strongVsMiddle.weakStars, 5.0);
+
+    final strongVsWeak = ClubAssignmentService.matchupStars(
+      rankStrong: 1,
+      rankWeak: 3,
+      teamCount: 3,
+      teamSizeStrong: 2,
+      teamSizeWeak: 2,
+      eloDiff: 50,
+    );
+    expect(strongVsWeak.strongStars, 4.0);
+    expect(strongVsWeak.weakStars, 5.0);
+  });
+
+  test('matchupStars preserves equal stars for an actual elo tie', () {
     final stars = ClubAssignmentService.matchupStars(
       rankStrong: 1,
       rankWeak: 2,
       teamCount: 3,
       teamSizeStrong: 2,
       teamSizeWeak: 2,
-      eloDiff: 36,
+      eloDiff: 0,
     );
-    expect(stars.strongStars, 4.5);
-    expect(stars.weakStars, 4.5); // Equal because close match
+    expect(stars.strongStars, stars.weakStars);
+  });
+
+  test('auto assignment gives the higher elo away team lower stars', () async {
+    SharedPreferences.setMockInitialValues({});
+    LocalStore.resetForTest();
+    final store = await LocalStore.getInstance();
+    final now = DateTime(2024, 1, 1);
+    await store.savePlayers([
+      for (final id in ['s1', 's2', 'w1', 'w2'])
+        Player(id: id, displayName: id, createdAt: now, updatedAt: now),
+    ]);
+    await store.saveRatings({
+      for (final id in ['s1', 's2'])
+        id: PlayerRating(
+          playerId: id,
+          elo: 1000,
+          gamesPlayed: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          updatedAt: now,
+        ),
+      for (final id in ['w1', 'w2'])
+        id: PlayerRating(
+          playerId: id,
+          elo: 950,
+          gamesPlayed: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          updatedAt: now,
+        ),
+    });
+    await store.saveTournaments([
+      Tournament(
+        id: 't',
+        name: 'Cup',
+        mode: MatchMode.twoVTwo,
+        status: TournamentStatus.group,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    ]);
+    await store.saveTournamentTeams([
+      TournamentTeam(
+        id: 'strong',
+        tournamentId: 't',
+        teamIndex: 0,
+        name: 'Strong',
+        playerIds: const ['s1', 's2'],
+      ),
+      TournamentTeam(
+        id: 'weak',
+        tournamentId: 't',
+        teamIndex: 1,
+        name: 'Weak',
+        playerIds: const ['w1', 'w2'],
+      ),
+    ]);
+    await store.saveTournamentMatches([
+      TournamentMatch(
+        id: 'm',
+        tournamentId: 't',
+        stage: TournamentStage.group,
+        homeTeamIndex: 1,
+        awayTeamIndex: 0,
+        scheduledOrder: 0,
+        status: TournamentMatchStatus.scheduled,
+      ),
+    ]);
+
+    await ClubAssignmentService(store).assignForTournamentSchedule(
+      tournamentId: 't',
+    );
+
+    final assigned = (await store.getTournamentMatches()).single;
+    expect(
+      assigned.awayAssignedStars!,
+      lessThan(assigned.homeAssignedStars!),
+    );
   });
 
   test('pickClub prefers exact stars and is deterministic with seed', () {

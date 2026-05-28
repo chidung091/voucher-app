@@ -143,8 +143,7 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
                 child: RadioListTile<ImportMode>(
                   value: ImportMode.overwrite,
                   groupValue: _mode,
-                  onChanged: (value) =>
-                      setState(() => _mode = value ?? _mode),
+                  onChanged: (value) => setState(() => _mode = value ?? _mode),
                   title: const Text('Overwrite'),
                 ),
               ),
@@ -152,8 +151,7 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
                 child: RadioListTile<ImportMode>(
                   value: ImportMode.merge,
                   groupValue: _mode,
-                  onChanged: (value) =>
-                      setState(() => _mode = value ?? _mode),
+                  onChanged: (value) => setState(() => _mode = value ?? _mode),
                   title: const Text('Merge'),
                 ),
               ),
@@ -189,7 +187,7 @@ class _DataManagementScreenState extends State<DataManagementScreen> {
               const SizedBox(height: 8),
               Text(
                 _report!.errors.join('\n'),
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ],
           ],

@@ -6,14 +6,14 @@ import 'package:voucher_app/domain/match.dart';
 import 'package:voucher_app/services/head_to_head_service.dart';
 
 void main() {
-  Future<LocalStore> _setupStore() async {
+  Future<LocalStore> setupStore() async {
     SharedPreferences.setMockInitialValues({});
     LocalStore.resetForTest();
     return LocalStore.getInstance();
   }
 
   test('1v1 counts exact players and swaps sides correctly', () async {
-    final store = await _setupStore();
+    final store = await setupStore();
     final base = DateTime(2024, 1, 1, 12);
     await store.saveMatches([
       Match(
@@ -63,7 +63,7 @@ void main() {
   });
 
   test('2v2 respects pair order and swaps sides', () async {
-    final store = await _setupStore();
+    final store = await setupStore();
     final base = DateTime(2024, 2, 1, 12);
     await store.saveMatches([
       Match(
@@ -113,7 +113,7 @@ void main() {
   });
 
   test('cache hit and invalidation after match update', () async {
-    final store = await _setupStore();
+    final store = await setupStore();
     final base = DateTime(2024, 3, 1, 12);
     final match1 = Match(
       id: 'm1',

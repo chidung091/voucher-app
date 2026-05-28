@@ -10,7 +10,7 @@ import 'package:voucher_app/domain/season.dart';
 import 'package:voucher_app/services/season_service.dart';
 
 void main() {
-  Future<LocalStore> _seedPlayers() async {
+  Future<LocalStore> seedPlayers() async {
     SharedPreferences.setMockInitialValues({});
     LocalStore.resetForTest();
     final store = await LocalStore.getInstance();
@@ -66,7 +66,7 @@ void main() {
   });
 
   test('Soft reset uses baseline and alpha', () async {
-    final store = await _seedPlayers();
+    final store = await seedPlayers();
     final service = await SeasonService.create();
     await service.updateSeasonConfig(
       SeasonConfig(
@@ -99,7 +99,7 @@ void main() {
   });
 
   test('Leaderboard only counts matches inside the season', () async {
-    final store = await _seedPlayers();
+    final store = await seedPlayers();
     final service = await SeasonService.create();
     await service.updateSeasonConfig(
       SeasonConfig(
@@ -155,7 +155,7 @@ void main() {
   });
 
   test('Elo multiplier applies during seasonal replay', () async {
-    final store = await _seedPlayers();
+    final store = await seedPlayers();
     final service = await SeasonService.create();
     await service.updateSeasonConfig(
       SeasonConfig(
@@ -191,7 +191,7 @@ void main() {
 
   test('Season cache returns cached leaderboard and recomputes on change',
       () async {
-    final store = await _seedPlayers();
+    final store = await seedPlayers();
     final service = await SeasonService.create();
     await service.updateSeasonConfig(
       SeasonConfig(
@@ -247,7 +247,7 @@ void main() {
   });
 
   test('Boundary Elo uses last rating event before season start', () async {
-    final store = await _seedPlayers();
+    final store = await seedPlayers();
     final service = await SeasonService.create();
     await service.updateSeasonConfig(
       SeasonConfig(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/app_theme.dart';
 import '../../domain/elo_config.dart';
 import '../../domain/player.dart';
 import '../../domain/player_rating.dart';
@@ -80,22 +81,22 @@ class _EloResetScreenState extends State<EloResetScreen> {
       context: context,
       builder: (context) => CustomDialog(
         title: 'Reset All ELO Ratings',
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'This will reset all player ratings and clear match history from ELO calculations.',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 12),
-            Text('• All wins/draws/losses will be reset to 0'),
-            Text('• Rating events will be cleared'),
-            Text('• Season and player stats caches will be invalidated'),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
+            const Text('• All wins/draws/losses will be reset to 0'),
+            const Text('• Rating events will be cleared'),
+            const Text('• Season and player stats caches will be invalidated'),
+            const SizedBox(height: 12),
             Text(
               'This action cannot be undone!',
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ],
         ),
@@ -132,7 +133,7 @@ class _EloResetScreenState extends State<EloResetScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('All ELO ratings have been reset!'),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColors.deepTeal,
         ),
       );
       context.pop();
@@ -141,7 +142,7 @@ class _EloResetScreenState extends State<EloResetScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Reset failed: $error'),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }

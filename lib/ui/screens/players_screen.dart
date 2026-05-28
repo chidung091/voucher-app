@@ -156,7 +156,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
         );
         await _load(service);
       } catch (error) {
-        if (!context.mounted) return;
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(error.toString())),
         );
@@ -307,6 +307,8 @@ class _PlayersScreenState extends State<PlayersScreen> {
                 (player) {
                   final rating = _ratings[player.id];
                   final eloDisplay = rating?.elo ?? EloConfig.defaultElo;
+                  final skillColor =
+                      _getSkillColor(theme.colorScheme, player.skillLevel);
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                     child: AppCard(
@@ -322,8 +324,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                             width: 40,
                             height: 40,
                             decoration: BoxDecoration(
-                              color: _getSkillColor(player.skillLevel)
-                                  .withOpacity(0.2),
+                              color: skillColor.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(AppRadius.sm),
                             ),
                             child: Center(
@@ -331,8 +332,7 @@ class _PlayersScreenState extends State<PlayersScreen> {
                                 'L${player.skillLevel}',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: _getSkillColor(player.skillLevel)
-                                      .withOpacity(1.0),
+                                  color: skillColor,
                                 ),
                               ),
                             ),
@@ -402,16 +402,16 @@ class _PlayersScreenState extends State<PlayersScreen> {
     );
   }
 
-  Color _getSkillColor(int level) {
+  Color _getSkillColor(ColorScheme colors, int level) {
     switch (level) {
       case 1:
-        return Colors.green;
+        return colors.primary;
       case 2:
-        return Colors.orange;
+        return colors.secondary;
       case 3:
-        return Colors.blue;
+        return colors.tertiary;
       default:
-        return Colors.grey;
+        return colors.outline;
     }
   }
 }

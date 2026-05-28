@@ -349,7 +349,10 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
           ],
           if (poolError != null) ...[
             const SizedBox(height: 8),
-            Text(poolError, style: const TextStyle(color: Colors.red)),
+            Text(
+              poolError,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ],
           if (_autoBalance && preview != null) ...[
             const SizedBox(height: 12),
@@ -377,7 +380,10 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
           ],
           if (_error != null) ...[
             const SizedBox(height: 8),
-            Text(_error!, style: const TextStyle(color: Colors.red)),
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ],
           const SizedBox(height: 16),
           PrimaryButton(
@@ -899,7 +905,7 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
               label: 'Save',
               onPressed: auto
                   ? () => Navigator.of(context).pop(
-                        _ClubAssignmentResult(auto: true),
+                        const _ClubAssignmentResult(auto: true),
                       )
                   : (selectedHome == null || selectedAway == null)
                       ? null
@@ -981,9 +987,9 @@ class _TournamentMatchCardState extends State<_TournamentMatchCard> {
               ),
               if (hasSoloHandicap) ...[
                 const SizedBox(width: 8),
-                Tooltip(
+                const Tooltip(
                   message: 'Solo team receives +0.5 star handicap.',
-                  child: const Icon(
+                  child: Icon(
                     Icons.info_outline,
                     size: 16,
                   ),
