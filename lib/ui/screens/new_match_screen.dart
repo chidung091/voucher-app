@@ -141,297 +141,265 @@ class _NewMatchScreenState extends State<NewMatchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWide = constraints.maxWidth >= 720;
+        final horizontalPadding = isWide ? AppSpacing.xl : AppSpacing.md;
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            AppSpacing.md,
+            horizontalPadding,
+            AppSpacing.md,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _MatchSetupPanel(
+                    mode: _mode,
+                    ratingMode: _ratingMode,
+                    multiplier: _effectiveMultiplier(),
+                    useCustomMultiplier: _useCustomMultiplier,
+                    customMultiplierController: _customMultiplierController,
+                    onModeChanged: (mode) => setState(() => _mode = mode),
+                    onRatingModeChanged: (ratingMode) => setState(() {
+                      _ratingMode = ratingMode;
+                      if (!_useCustomMultiplier) {
+                        _customMultiplierController.text =
+                            ratingMode.defaultMultiplier().toStringAsFixed(1);
+                      }
+                    }),
+                    onCustomMultiplierChanged: (value) =>
+                        setState(() => _useCustomMultiplier = value),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _MatchBoard(
+                    isWide: isWide,
+                    mode: _mode,
+                    players: _players,
+                    sideA1: _sideA1,
+                    sideA2: _mode == MatchMode.twoVTwo ? _sideA2 : null,
+                    sideB1: _sideB1,
+                    sideB2: _mode == MatchMode.twoVTwo ? _sideB2 : null,
+                    scoreA: _scoreA,
+                    scoreB: _scoreB,
+                    onSideA1Changed: (value) => setState(() => _sideA1 = value),
+                    onSideA2Changed: _mode == MatchMode.twoVTwo
+                        ? (value) => setState(() => _sideA2 = value)
+                        : null,
+                    onSideB1Changed: (value) => setState(() => _sideB1 = value),
+                    onSideB2Changed: _mode == MatchMode.twoVTwo
+                        ? (value) => setState(() => _sideB2 = value)
+                        : null,
+                    getPlayerName: _getPlayerName,
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _ErrorBanner(message: _error!),
+                  ],
+                  const SizedBox(height: AppSpacing.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: PrimaryButton(
+                          label: 'Save Match',
+                          icon: Icons.save,
+                          onPressed: _saveMatch,
+                          isLoading: _isSaving,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Tooltip(
+                        message: 'Reload Players',
+                        child: IconButton.outlined(
+                          onPressed: _loadPlayers,
+                          icon: const Icon(Icons.refresh),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MatchSetupPanel extends StatelessWidget {
+  const _MatchSetupPanel({
+    required this.mode,
+    required this.ratingMode,
+    required this.multiplier,
+    required this.useCustomMultiplier,
+    required this.customMultiplierController,
+    required this.onModeChanged,
+    required this.onRatingModeChanged,
+    required this.onCustomMultiplierChanged,
+  });
+
+  final MatchMode mode;
+  final MatchRatingMode ratingMode;
+  final double multiplier;
+  final bool useCustomMultiplier;
+  final TextEditingController customMultiplierController;
+  final ValueChanged<MatchMode> onModeChanged;
+  final ValueChanged<MatchRatingMode> onRatingModeChanged;
+  final ValueChanged<bool> onCustomMultiplierChanged;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      children: [
-        // Match Mode & Rating Cards
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Icon(Icons.sports_soccer, color: colorScheme.primary),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    'Match Setup',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-
-              // Match Mode Selection
-              Text(
-                'Match Mode',
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  Expanded(
-                    child: _ModeChip(
-                      label: '1v1',
-                      icon: Icons.person,
-                      isSelected: _mode == MatchMode.oneVOne,
-                      onTap: () => setState(() => _mode = MatchMode.oneVOne),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: _ModeChip(
-                      label: '2v2',
-                      icon: Icons.group,
-                      isSelected: _mode == MatchMode.twoVTwo,
-                      onTap: () => setState(() => _mode = MatchMode.twoVTwo),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-
-              // Rating Mode Selection
-              Text(
-                'Rating Mode',
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  _RatingChip(
-                    label: 'Friendly',
-                    multiplier: 0.5,
-                    isSelected: _ratingMode == MatchRatingMode.friendly,
-                    onTap: () => setState(() {
-                      _ratingMode = MatchRatingMode.friendly;
-                      if (!_useCustomMultiplier) {
-                        _customMultiplierController.text = '0.5';
-                      }
-                    }),
-                  ),
-                  _RatingChip(
-                    label: 'Ranked',
-                    multiplier: 1.0,
-                    isSelected: _ratingMode == MatchRatingMode.ranked,
-                    onTap: () => setState(() {
-                      _ratingMode = MatchRatingMode.ranked;
-                      if (!_useCustomMultiplier) {
-                        _customMultiplierController.text = '1.0';
-                      }
-                    }),
-                  ),
-                  _RatingChip(
-                    label: 'Tournament',
-                    multiplier: 1.5,
-                    isSelected: _ratingMode == MatchRatingMode.tournament,
-                    onTap: () => setState(() {
-                      _ratingMode = MatchRatingMode.tournament;
-                      if (!_useCustomMultiplier) {
-                        _customMultiplierController.text = '1.5';
-                      }
-                    }),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.md),
-
-              // Multiplier display
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm,
+              Icon(Icons.sports_soccer, color: colorScheme.primary, size: 20),
+              const SizedBox(width: AppSpacing.sm),
+              Text('Match Setup', style: theme.textTheme.titleSmall),
+              const Spacer(),
+              _MultiplierPill(multiplier: multiplier),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: _ModeChip(
+                  label: '1v1',
+                  icon: Icons.person,
+                  isSelected: mode == MatchMode.oneVOne,
+                  onTap: () => onModeChanged(MatchMode.oneVOne),
                 ),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _ModeChip(
+                  label: '2v2',
+                  icon: Icons.group,
+                  isSelected: mode == MatchMode.twoVTwo,
+                  onTap: () => onModeChanged(MatchMode.twoVTwo),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.speed, size: 16, color: colorScheme.primary),
-                    const SizedBox(width: AppSpacing.xs),
-                    Text(
-                      'Multiplier: ${_effectiveMultiplier().toStringAsFixed(1)}x',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.primary,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: _RatingChip(
+                  label: 'Friendly',
+                  multiplier: 0.5,
+                  isSelected: ratingMode == MatchRatingMode.friendly,
+                  onTap: () => onRatingModeChanged(MatchRatingMode.friendly),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _RatingChip(
+                  label: 'Ranked',
+                  multiplier: 1.0,
+                  isSelected: ratingMode == MatchRatingMode.ranked,
+                  onTap: () => onRatingModeChanged(MatchRatingMode.ranked),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _RatingChip(
+                  label: 'Tournament',
+                  multiplier: 1.5,
+                  isSelected: ratingMode == MatchRatingMode.tournament,
+                  onTap: () => onRatingModeChanged(MatchRatingMode.tournament),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Switch(
+                value: useCustomMultiplier,
+                onChanged: onCustomMultiplierChanged,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  'Custom multiplier',
+                  style: theme.textTheme.bodySmall,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (useCustomMultiplier)
+                SizedBox(
+                  width: 86,
+                  child: TextField(
+                    controller: customMultiplierController,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    textAlign: TextAlign.center,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      prefixIcon: Icon(Icons.edit, size: 16),
+                      prefixIconConstraints: BoxConstraints(minWidth: 30),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.sm,
                       ),
                     ),
-                  ],
-                ),
-              ),
-
-              // Custom multiplier toggle
-              SwitchListTile(
-                title: const Text('Custom multiplier'),
-                value: _useCustomMultiplier,
-                contentPadding: EdgeInsets.zero,
-                onChanged: (value) =>
-                    setState(() => _useCustomMultiplier = value),
-              ),
-              if (_useCustomMultiplier)
-                CustomTextField(
-                  controller: _customMultiplierController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  label: 'Custom ELO multiplier',
-                  prefixIcon: const Icon(Icons.edit),
+                  ),
                 ),
             ],
           ),
-        ),
+        ],
+      ),
+    );
+  }
+}
 
-        const SizedBox(height: AppSpacing.lg),
+class _MultiplierPill extends StatelessWidget {
+  const _MultiplierPill({required this.multiplier});
 
-        // Side A
-        _TeamCard(
-          title: 'Side A',
-          color: colorScheme.primary,
-          players: _players,
-          player1: _sideA1,
-          player2: _mode == MatchMode.twoVTwo ? _sideA2 : null,
-          onPlayer1Changed: (v) => setState(() => _sideA1 = v),
-          onPlayer2Changed: _mode == MatchMode.twoVTwo
-              ? (v) => setState(() => _sideA2 = v)
-              : null,
-          showPlayer2: _mode == MatchMode.twoVTwo,
-          getPlayerName: _getPlayerName,
-        ),
+  final double multiplier;
 
-        const SizedBox(height: AppSpacing.md),
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
 
-        // VS Divider
-        Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xl,
-              vertical: AppSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(AppRadius.full),
-            ),
-            child: const Text(
-              'VS',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: AppSpacing.md),
-
-        // Side B
-        _TeamCard(
-          title: 'Side B',
-          color: colorScheme.secondary,
-          players: _players,
-          player1: _sideB1,
-          player2: _mode == MatchMode.twoVTwo ? _sideB2 : null,
-          onPlayer1Changed: (v) => setState(() => _sideB1 = v),
-          onPlayer2Changed: _mode == MatchMode.twoVTwo
-              ? (v) => setState(() => _sideB2 = v)
-              : null,
-          showPlayer2: _mode == MatchMode.twoVTwo,
-          getPlayerName: _getPlayerName,
-        ),
-
-        const SizedBox(height: AppSpacing.lg),
-
-        // Score Input
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.scoreboard_outlined, color: colorScheme.secondary),
-                  const SizedBox(width: AppSpacing.sm),
-                  Text(
-                    'Final Score',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Row(
-                children: [
-                  Expanded(
-                    child: _ScoreInput(
-                      label: 'Side A',
-                      controller: _scoreA,
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                    child: Text(
-                      '-',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                  ),
-                  Expanded(
-                    child: _ScoreInput(
-                      label: 'Side B',
-                      controller: _scoreB,
-                      color: colorScheme.secondary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        if (_error != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: colorScheme.error.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: colorScheme.error.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.error_outline, color: colorScheme.error),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    _error!,
-                    style: TextStyle(color: colorScheme.error),
-                  ),
-                ),
-              ],
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: colorScheme.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(AppRadius.full),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.speed, size: 14, color: colorScheme.primary),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            '${multiplier.toStringAsFixed(1)}x',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: colorScheme.primary,
             ),
           ),
         ],
-
-        const SizedBox(height: AppSpacing.xl),
-
-        PrimaryButton(
-          label: 'Save Match',
-          icon: Icons.save,
-          onPressed: _saveMatch,
-          isLoading: _isSaving,
-        ),
-
-        const SizedBox(height: AppSpacing.sm),
-
-        SecondaryButton(
-          label: 'Reload Players',
-          icon: Icons.refresh,
-          onPressed: _loadPlayers,
-        ),
-      ],
+      ),
     );
   }
 }
@@ -459,8 +427,8 @@ class _ModeChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
           color: isSelected
@@ -477,6 +445,7 @@ class _ModeChip extends StatelessWidget {
           children: [
             Icon(
               icon,
+              size: 18,
               color: isSelected
                   ? colorScheme.primary
                   : theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
@@ -485,6 +454,7 @@ class _ModeChip extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: isSelected
                     ? colorScheme.primary
@@ -521,8 +491,8 @@ class _RatingChip extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
+          horizontal: AppSpacing.xs,
+          vertical: AppSpacing.xs,
         ),
         decoration: BoxDecoration(
           color: isSelected
@@ -538,7 +508,10 @@ class _RatingChip extends StatelessWidget {
           children: [
             Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: isSelected
                     ? colorScheme.secondary
@@ -561,16 +534,102 @@ class _RatingChip extends StatelessWidget {
   }
 }
 
-class _TeamCard extends StatelessWidget {
-  const _TeamCard({
+class _MatchBoard extends StatelessWidget {
+  const _MatchBoard({
+    required this.isWide,
+    required this.mode,
+    required this.players,
+    required this.sideA1,
+    required this.sideA2,
+    required this.sideB1,
+    required this.sideB2,
+    required this.scoreA,
+    required this.scoreB,
+    required this.onSideA1Changed,
+    required this.onSideA2Changed,
+    required this.onSideB1Changed,
+    required this.onSideB2Changed,
+    required this.getPlayerName,
+  });
+
+  final bool isWide;
+  final MatchMode mode;
+  final List<Player> players;
+  final String? sideA1;
+  final String? sideA2;
+  final String? sideB1;
+  final String? sideB2;
+  final TextEditingController scoreA;
+  final TextEditingController scoreB;
+  final ValueChanged<String?> onSideA1Changed;
+  final ValueChanged<String?>? onSideA2Changed;
+  final ValueChanged<String?> onSideB1Changed;
+  final ValueChanged<String?>? onSideB2Changed;
+  final String Function(String?) getPlayerName;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final scoreWidth = isWide ? 148.0 : 96.0;
+
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _CompactTeamColumn(
+              title: 'Side A',
+              color: colorScheme.primary,
+              players: players,
+              player1: sideA1,
+              player2: sideA2,
+              showPlayer2: mode == MatchMode.twoVTwo,
+              onPlayer1Changed: onSideA1Changed,
+              onPlayer2Changed: onSideA2Changed,
+              getPlayerName: getPlayerName,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          SizedBox(
+            width: scoreWidth,
+            child: _ScorePanel(
+              scoreA: scoreA,
+              scoreB: scoreB,
+              colorA: colorScheme.primary,
+              colorB: colorScheme.secondary,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _CompactTeamColumn(
+              title: 'Side B',
+              color: colorScheme.secondary,
+              players: players,
+              player1: sideB1,
+              player2: sideB2,
+              showPlayer2: mode == MatchMode.twoVTwo,
+              onPlayer1Changed: onSideB1Changed,
+              onPlayer2Changed: onSideB2Changed,
+              getPlayerName: getPlayerName,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompactTeamColumn extends StatelessWidget {
+  const _CompactTeamColumn({
     required this.title,
     required this.color,
     required this.players,
     required this.player1,
     required this.player2,
+    required this.showPlayer2,
     required this.onPlayer1Changed,
     required this.onPlayer2Changed,
-    required this.showPlayer2,
     required this.getPlayerName,
   });
 
@@ -579,98 +638,310 @@ class _TeamCard extends StatelessWidget {
   final List<Player> players;
   final String? player1;
   final String? player2;
-  final void Function(String?) onPlayer1Changed;
-  final void Function(String?)? onPlayer2Changed;
   final bool showPlayer2;
+  final ValueChanged<String?> onPlayer1Changed;
+  final ValueChanged<String?>? onPlayer2Changed;
   final String Function(String?) getPlayerName;
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 18,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(2),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Text(
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       color: color,
+                      fontWeight: FontWeight.w700,
                     ),
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          DropdownField<String>(
-            value: player1,
-            items: players.map((p) => p.id).toList(),
-            itemBuilder: (id) => Text(getPlayerName(id)),
-            onSelected: onPlayer1Changed,
-            label: 'Player 1',
-            prefixIcon: Icon(Icons.person, color: color),
-          ),
-          if (showPlayer2) ...[
-            const SizedBox(height: AppSpacing.md),
-            DropdownField<String>(
-              value: player2,
-              items: players.map((p) => p.id).toList(),
-              itemBuilder: (id) => Text(getPlayerName(id)),
-              onSelected: (val) => onPlayer2Changed?.call(val),
-              label: 'Player 2',
-              prefixIcon: Icon(Icons.person, color: color),
             ),
           ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _CompactPlayerPicker(
+          label: 'Player 1',
+          value: player1,
+          players: players,
+          color: color,
+          getPlayerName: getPlayerName,
+          onSelected: onPlayer1Changed,
+        ),
+        if (showPlayer2) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _CompactPlayerPicker(
+            label: 'Player 2',
+            value: player2,
+            players: players,
+            color: color,
+            getPlayerName: getPlayerName,
+            onSelected: (value) => onPlayer2Changed?.call(value),
+          ),
         ],
+      ],
+    );
+  }
+}
+
+class _CompactPlayerPicker extends StatelessWidget {
+  const _CompactPlayerPicker({
+    required this.label,
+    required this.value,
+    required this.players,
+    required this.color,
+    required this.getPlayerName,
+    required this.onSelected,
+  });
+
+  final String label;
+  final String? value;
+  final List<Player> players;
+  final Color color;
+  final String Function(String?) getPlayerName;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final hasValue = value != null;
+
+    return InkWell(
+      onTap: () => _showPlayerSheet(context),
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: theme.inputDecorationTheme.fillColor,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.person, color: color, size: 18),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Text(
+                hasValue ? getPlayerName(value) : label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: hasValue
+                      ? theme.textTheme.bodyMedium?.color
+                      : theme.textTheme.bodyMedium?.color?.withOpacity(0.45),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 18,
+              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.55),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPlayerSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.8,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Row(
+                children: [
+                  Text(label, style: Theme.of(context).textTheme.titleMedium),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView.builder(
+                controller: scrollController,
+                itemCount: players.length,
+                itemBuilder: (context, index) {
+                  final player = players[index];
+                  final isSelected = player.id == value;
+
+                  return ListTile(
+                    dense: true,
+                    title: Text(player.displayName),
+                    trailing: isSelected
+                        ? Icon(
+                            Icons.check_circle,
+                            color: Theme.of(context).colorScheme.primary,
+                          )
+                        : null,
+                    onTap: () {
+                      onSelected(player.id);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _ScoreInput extends StatelessWidget {
-  const _ScoreInput({
-    required this.label,
+class _ScorePanel extends StatelessWidget {
+  const _ScorePanel({
+    required this.scoreA,
+    required this.scoreB,
+    required this.colorA,
+    required this.colorB,
+  });
+
+  final TextEditingController scoreA;
+  final TextEditingController scoreB;
+  final Color colorA;
+  final Color colorB;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      children: [
+        Text(
+          'Score',
+          style: theme.textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              child: _CompactScoreInput(controller: scoreA, color: colorA),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              child: Text(
+                '-',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Expanded(
+              child: _CompactScoreInput(controller: scoreB, color: colorB),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.xs,
+          ),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(AppRadius.full),
+          ),
+          child: Text(
+            'VS',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CompactScoreInput extends StatelessWidget {
+  const _CompactScoreInput({
     required this.controller,
     required this.color,
   });
 
-  final String label;
   final TextEditingController controller;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: color,
-            fontWeight: FontWeight.w500,
-          ),
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w800,
+        color: color,
+      ),
+      decoration: const InputDecoration(
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.xs,
+          vertical: AppSpacing.sm,
         ),
-        const SizedBox(height: AppSpacing.sm),
-        CustomTextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colorScheme.error.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: colorScheme.error.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: colorScheme.error, size: 20),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(color: colorScheme.error),
+            ),
           ),
-          // Note: Decoration for borders is handled by CustomTextField but custom big text needs careful check.
-          // Since CustomTextField enforces standard borders, we rely on them.
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

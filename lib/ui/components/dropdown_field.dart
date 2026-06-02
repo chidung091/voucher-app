@@ -12,6 +12,7 @@ class DropdownField<T> extends StatelessWidget {
     this.value,
     this.hint,
     this.itemBuilder,
+    this.displayBuilder,
     this.enabled = true,
     this.prefixIcon,
   });
@@ -22,11 +23,14 @@ class DropdownField<T> extends StatelessWidget {
   final String? hint;
   final void Function(T?) onSelected;
   final Widget Function(T)? itemBuilder;
+  final String Function(T)? displayBuilder;
   final bool enabled;
   final Widget? prefixIcon;
 
   String _getDisplayText(T? item) {
     if (item == null) return hint ?? 'Select...';
+    final displayBuilder = this.displayBuilder;
+    if (displayBuilder != null) return displayBuilder(item);
     return item.toString();
   }
 
