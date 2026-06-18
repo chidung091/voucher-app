@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_theme.dart';
 import '../../domain/enums.dart';
 import '../../domain/head_to_head.dart';
 import '../../domain/player.dart';
 import '../../services/head_to_head_service.dart';
 import '../../services/match_service.dart';
 import '../../services/player_service.dart';
+import '../../widgets/responsive_page.dart';
 
 class HeadToHeadScreen extends StatefulWidget {
   const HeadToHeadScreen({super.key});
@@ -129,140 +131,195 @@ class _HeadToHeadScreenState extends State<HeadToHeadScreen> {
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Head-to-Head'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: '1v1'),
-              Tab(text: '2v2'),
-            ],
+      child: Column(
+        children: [
+          Material(
+            color: Theme.of(context).colorScheme.surface,
+            child: const TabBar(
+              tabs: [
+                Tab(text: '1v1'),
+                Tab(text: '2v2'),
+              ],
+            ),
           ),
-        ),
-        body: TabBarView(
-          children: [
-            _build1v1Tab(),
-            _build2v2Tab(),
-          ],
-        ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _build1v1Tab(),
+                _build2v2Tab(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _build1v1Tab() {
     if (_players.length < 2) {
-      return const Center(child: Text('Add at least 2 players.'));
-    }
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        _PlayerPickRow(
-          label: 'Player A',
-          value: _playerA,
-          players: _players,
-          onChanged: (value) {
-            setState(() => _playerA = value);
-            _refresh1v1();
-          },
-        ),
-        const SizedBox(height: 12),
-        _PlayerPickRow(
-          label: 'Player B',
-          value: _playerB,
-          players: _players,
-          onChanged: (value) {
-            setState(() => _playerB = value);
-            _refresh1v1();
-          },
-        ),
-        if (_error1v1 != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            _error1v1!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
+      return const ResponsivePage(
+        maxWidth: 720,
+        children: [
+          Card(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.lg),
+              child: Text('Add at least 2 players.'),
+            ),
           ),
         ],
-        const SizedBox(height: 16),
-        _buildStatsSection(_h2h1v1Future),
+      );
+    }
+    final controls = Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          children: [
+            _PlayerPickRow(
+              label: 'Player A',
+              value: _playerA,
+              players: _players,
+              onChanged: (value) {
+                setState(() => _playerA = value);
+                _refresh1v1();
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _PlayerPickRow(
+              label: 'Player B',
+              value: _playerB,
+              players: _players,
+              onChanged: (value) {
+                setState(() => _playerB = value);
+                _refresh1v1();
+              },
+            ),
+            if (_error1v1 != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                _error1v1!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+
+    return ResponsivePage(
+      maxWidth: 1080,
+      children: [
+        ResponsiveSplit(
+          breakpoint: 820,
+          startFlex: 1,
+          endFlex: 2,
+          start: controls,
+          end: _buildStatsSection(_h2h1v1Future),
+        ),
       ],
     );
   }
 
   Widget _build2v2Tab() {
     if (_players.length < 4) {
-      return const Center(child: Text('Add at least 4 players.'));
-    }
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Team AB',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+      return const ResponsivePage(
+        maxWidth: 720,
+        children: [
+          Card(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.lg),
+              child: Text('Add at least 4 players.'),
             ),
-            TextButton(
-              onPressed: _normalizePairs,
-              child: const Text('Normalize pairs'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        _PlayerPickRow(
-          label: 'Player A',
-          value: _playerA,
-          players: _players,
-          onChanged: (value) {
-            setState(() => _playerA = value);
-            _refresh2v2();
-          },
-        ),
-        const SizedBox(height: 12),
-        _PlayerPickRow(
-          label: 'Player B',
-          value: _playerB,
-          players: _players,
-          onChanged: (value) {
-            setState(() => _playerB = value);
-            _refresh2v2();
-          },
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Team CD',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        _PlayerPickRow(
-          label: 'Player C',
-          value: _playerC,
-          players: _players,
-          onChanged: (value) {
-            setState(() => _playerC = value);
-            _refresh2v2();
-          },
-        ),
-        const SizedBox(height: 12),
-        _PlayerPickRow(
-          label: 'Player D',
-          value: _playerD,
-          players: _players,
-          onChanged: (value) {
-            setState(() => _playerD = value);
-            _refresh2v2();
-          },
-        ),
-        if (_error2v2 != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            _error2v2!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ],
-        const SizedBox(height: 16),
-        _buildStatsSection(_h2h2v2Future),
+      );
+    }
+    final controls = Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Team AB',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                TextButton(
+                  onPressed: _normalizePairs,
+                  child: const Text('Normalize pairs'),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _PlayerPickRow(
+              label: 'Player A',
+              value: _playerA,
+              players: _players,
+              onChanged: (value) {
+                setState(() => _playerA = value);
+                _refresh2v2();
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _PlayerPickRow(
+              label: 'Player B',
+              value: _playerB,
+              players: _players,
+              onChanged: (value) {
+                setState(() => _playerB = value);
+                _refresh2v2();
+              },
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Team CD',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _PlayerPickRow(
+              label: 'Player C',
+              value: _playerC,
+              players: _players,
+              onChanged: (value) {
+                setState(() => _playerC = value);
+                _refresh2v2();
+              },
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _PlayerPickRow(
+              label: 'Player D',
+              value: _playerD,
+              players: _players,
+              onChanged: (value) {
+                setState(() => _playerD = value);
+                _refresh2v2();
+              },
+            ),
+            if (_error2v2 != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                _error2v2!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+
+    return ResponsivePage(
+      maxWidth: 1120,
+      children: [
+        ResponsiveSplit(
+          breakpoint: 900,
+          startFlex: 1,
+          endFlex: 2,
+          start: controls,
+          end: _buildStatsSection(_h2h2v2Future),
+        ),
       ],
     );
   }
@@ -446,6 +503,7 @@ class _PlayerPickRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
       value: value,
+      isExpanded: true,
       items: players
           .map(
             (player) => DropdownMenuItem(

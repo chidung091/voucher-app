@@ -17,6 +17,7 @@ import '../../services/club_service.dart';
 import '../../services/player_service.dart';
 import '../../services/team_balancer.dart';
 import '../../services/tournament_service.dart';
+import '../../widgets/responsive_page.dart';
 import '../components/components.dart';
 
 String _formatMatchMode(MatchMode mode) {
@@ -75,8 +76,8 @@ class _TournamentScreenState extends State<TournamentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return ResponsivePage(
+      maxWidth: 1080,
       children: [
         Row(
           children: [
@@ -92,22 +93,27 @@ class _TournamentScreenState extends State<TournamentScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         if (_tournaments.isEmpty)
-          const Text('No tournaments yet.')
+          const EmptyState(
+            icon: Icons.emoji_events_outlined,
+            title: 'No tournaments yet',
+          )
         else
-          ..._tournaments.map(
-            (tournament) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: AppCard(
-                child: CustomListTile(
-                  title: tournament.name,
-                  subtitle: tournament.status.toJson(),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _openDetail(tournament.id),
+          ResponsiveGrid(
+            minItemWidth: 320,
+            maxColumns: 2,
+            children: [
+              for (final tournament in _tournaments)
+                AppCard(
+                  child: CustomListTile(
+                    title: tournament.name,
+                    subtitle: tournament.status.toJson(),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _openDetail(tournament.id),
+                  ),
                 ),
-              ),
-            ),
+            ],
           ),
       ],
     );
@@ -272,16 +278,15 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
     final showSoloPicker =
         _mode == MatchMode.twoVTwo && poolPlayers.length.isOdd;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Create Tournament')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+    final setupPanel = AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           CustomTextField(
             controller: _nameController,
             label: 'Tournament name',
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           DropdownField<MatchMode>(
             value: _mode,
             items: const [MatchMode.oneVOne, MatchMode.twoVTwo],
@@ -296,27 +301,34 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
             },
             label: 'Mode',
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           SwitchListTile(
+            contentPadding: EdgeInsets.zero,
             title: const Text('Enable finals'),
             value: _finalsEnabled,
             onChanged: (value) => setState(() => _finalsEnabled = value),
           ),
-          const SizedBox(height: 8),
           SwitchListTile(
+            contentPadding: EdgeInsets.zero,
             title: const Text('Auto balance teams'),
             value: _autoBalance,
             onChanged: (value) => setState(() => _autoBalance = value),
           ),
-          const SizedBox(height: 8),
+        ],
+      ),
+    );
+    final poolPanel = AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Text(
             'Player pool',
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: [
               for (final player in widget.players)
                 FilterChip(
@@ -338,11 +350,12 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
             ],
           ),
           if (showSoloPicker) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             DropdownField<String?>(
               value: _forceSoloPlayerId,
               items: <String?>[null, ...poolPlayers.map((p) => p.id)],
               displayBuilder: (id) {
+                if (id == null) return 'Auto-detect Solo Player';
                 final player = poolPlayers.firstWhere((p) => p.id == id);
                 return 'Solo: ${player.displayName}';
               },
@@ -358,44 +371,99 @@ class _TournamentCreateScreenState extends State<TournamentCreateScreen> {
             ),
           ],
           if (poolError != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               poolError,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ],
-          if (_autoBalance && preview != null) ...[
-            const SizedBox(height: 12),
-            Text(
-              'Preview',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            for (var i = 0; i < preview.teams.length; i++)
-              Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  title: Text(
-                    'Team ${i + 1} (${preview.teams[i].length == 1 ? 'Solo' : 'Duo'})',
-                  ),
-                  subtitle: Text(
-                    preview.teams[i]
-                        .map((entry) =>
-                            '${entry.player.displayName} (${entry.elo})')
-                        .join(', '),
-                  ),
-                  trailing: Text('Total ${preview.teamTotals[i]}'),
+        ],
+      ),
+    );
+    final previewPanel = _autoBalance && preview != null
+        ? AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Preview',
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-              ),
-          ],
+                const SizedBox(height: AppSpacing.sm),
+                ResponsiveGrid(
+                  minItemWidth: 280,
+                  maxColumns: 2,
+                  children: [
+                    for (var i = 0; i < preview.teams.length; i++)
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withOpacity(0.55),
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Team ${i + 1} (${preview.teams[i].length == 1 ? 'Solo' : 'Duo'})',
+                                    style:
+                                        Theme.of(context).textTheme.titleSmall,
+                                  ),
+                                ),
+                                Text('Total ${preview.teamTotals[i]}'),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              preview.teams[i]
+                                  .map((entry) =>
+                                      '${entry.player.displayName} (${entry.elo})')
+                                  .join(', '),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          )
+        : null;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Create Tournament')),
+      body: ResponsivePage(
+        maxWidth: 1120,
+        children: [
+          ResponsiveSplit(
+            breakpoint: 900,
+            start: setupPanel,
+            end: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                poolPanel,
+                if (previewPanel != null) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  previewPanel,
+                ],
+              ],
+            ),
+          ),
           if (_error != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.md),
             Text(
               _error!,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.lg),
           PrimaryButton(
             onPressed: _create,
             label: 'Create Tournament',
@@ -848,7 +916,8 @@ class _TournamentMatchesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return ResponsivePage(
+      maxWidth: 1240,
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         Row(
@@ -886,20 +955,23 @@ class _TournamentMatchesTab extends StatelessWidget {
           ),
         ],
         const SizedBox(height: AppSpacing.sm),
-        for (final match in view.matches)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _TournamentMatchCard(
-              match: match,
-              teams: view.teams,
-              clubs: clubs,
-              playerName: playerName,
-              onSave: onSave,
-              onForfeit: onForfeit,
-              onAutoAssign: onAutoAssign,
-              onManualAssign: onManualAssign,
-            ),
-          ),
+        ResponsiveGrid(
+          minItemWidth: 540,
+          maxColumns: 2,
+          children: [
+            for (final match in view.matches)
+              _TournamentMatchCard(
+                match: match,
+                teams: view.teams,
+                clubs: clubs,
+                playerName: playerName,
+                onSave: onSave,
+                onForfeit: onForfeit,
+                onAutoAssign: onAutoAssign,
+                onManualAssign: onManualAssign,
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -923,7 +995,8 @@ class _TournamentStandingsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return ResponsivePage(
+      maxWidth: 1080,
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
         if (view.tournament.status == TournamentStatus.completed &&
@@ -934,16 +1007,19 @@ class _TournamentStandingsTab extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
-        for (var index = 0; index < view.standings.length; index++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _StandingCard(
-              position: index + 1,
-              standing: view.standings[index],
-              team: _teamFor(view.standings[index].teamIndex),
-              playerName: playerName,
-            ),
-          ),
+        ResponsiveGrid(
+          minItemWidth: 340,
+          maxColumns: 2,
+          children: [
+            for (var index = 0; index < view.standings.length; index++)
+              _StandingCard(
+                position: index + 1,
+                standing: view.standings[index],
+                team: _teamFor(view.standings[index].teamIndex),
+                playerName: playerName,
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -1091,48 +1167,52 @@ class _TournamentTeamsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return ResponsivePage(
+      maxWidth: 1080,
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
-        for (final team in view.teams)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: AppCard(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 18,
-                    child: Text('${team.teamIndex + 1}'),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          team.name,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        Text(
-                          team.playerIds.map(playerName).join(', '),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+        ResponsiveGrid(
+          minItemWidth: 320,
+          maxColumns: 3,
+          children: [
+            for (final team in view.teams)
+              AppCard(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      child: Text('${team.teamIndex + 1}'),
                     ),
-                  ),
-                  _InfoPill(
-                    icon: team.playerIds.length == 1
-                        ? Icons.person_outline
-                        : Icons.group_outlined,
-                    label: team.playerIds.length == 1 ? 'Solo' : 'Duo',
-                  ),
-                ],
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            team.name,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          Text(
+                            team.playerIds.map(playerName).join(', '),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    _InfoPill(
+                      icon: team.playerIds.length == 1
+                          ? Icons.person_outline
+                          : Icons.group_outlined,
+                      label: team.playerIds.length == 1 ? 'Solo' : 'Duo',
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
+          ],
+        ),
       ],
     );
   }

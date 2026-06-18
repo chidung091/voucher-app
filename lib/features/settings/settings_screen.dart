@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
+import '../../core/app_theme.dart';
 import '../../state/providers.dart';
+import '../../widgets/responsive_page.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -12,17 +14,17 @@ class SettingsScreen extends ConsumerWidget {
     final localizations = AppLocalizations.of(context)!;
     final themeMode = ref.watch(themeModeProvider);
 
-    return ListView(
-      padding: const EdgeInsets.all(20),
+    return ResponsivePage(
+      maxWidth: 860,
       children: [
         Text(
           localizations.settingsTitle,
           style: Theme.of(context).textTheme.headlineSmall,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -59,23 +61,28 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        Card(
-          child: ListTile(
-            title: Text(localizations.languageTitle),
-            subtitle: Text(localizations.english),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: ListTile(
-            title: Text(localizations.apiEnvironmentTitle),
-            subtitle: Text(localizations.apiEnvironmentProduction),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {},
-          ),
+        const SizedBox(height: AppSpacing.lg),
+        ResponsiveGrid(
+          minItemWidth: 320,
+          maxColumns: 2,
+          children: [
+            Card(
+              child: ListTile(
+                title: Text(localizations.languageTitle),
+                subtitle: Text(localizations.english),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {},
+              ),
+            ),
+            Card(
+              child: ListTile(
+                title: Text(localizations.apiEnvironmentTitle),
+                subtitle: Text(localizations.apiEnvironmentProduction),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {},
+              ),
+            ),
+          ],
         ),
       ],
     );

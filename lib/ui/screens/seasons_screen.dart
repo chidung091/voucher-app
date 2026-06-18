@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../core/app_theme.dart';
 import '../../domain/enums.dart';
 import '../../domain/player.dart';
 import '../../domain/season.dart';
 import '../../services/player_service.dart';
 import '../../services/season_service.dart';
 import '../../widgets/error_view.dart';
+import '../../widgets/responsive_page.dart';
 
 class SeasonsScreen extends StatefulWidget {
   const SeasonsScreen({super.key});
@@ -117,18 +119,19 @@ class _SeasonsScreenState extends State<SeasonsScreen> {
     final parsed = int.tryParse(value);
     if (parsed == null || parsed <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Baseline Elo must be a positive number.')),
+        const SnackBar(
+            content: Text('Baseline Elo must be a positive number.')),
       );
       return;
     }
-    final config = (_config ?? SeasonConfig.defaults())
-        .copyWith(baselineElo: parsed);
+    final config =
+        (_config ?? SeasonConfig.defaults()).copyWith(baselineElo: parsed);
     _updateConfig(config);
   }
 
   void _updateResetPolicy(SeasonResetPolicy policy) {
-    final config = (_config ?? SeasonConfig.defaults())
-        .copyWith(resetPolicy: policy);
+    final config =
+        (_config ?? SeasonConfig.defaults()).copyWith(resetPolicy: policy);
     _updateConfig(config);
   }
 
@@ -147,81 +150,112 @@ class _SeasonsScreenState extends State<SeasonsScreen> {
   @override
   Widget build(BuildContext context) {
     final config = _config;
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    final leaderboard = _LeaderboardSection(
+      future: _leaderboardFuture,
+      playerMap: _playerMap,
+      onRetry: _refreshLeaderboard,
+    );
+    final settings =
+        config == null ? const SizedBox.shrink() : _buildSettingsCard(config);
+
+    return ResponsivePage(
+      maxWidth: 1120,
       children: [
         Text(
           'Seasons',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<SeasonType>(
-                value: _seasonType,
-                decoration: const InputDecoration(
-                  labelText: 'Season type',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(
-                    value: SeasonType.month,
-                    child: Text('Month'),
-                  ),
-                  DropdownMenuItem(
-                    value: SeasonType.quarter,
-                    child: Text('Quarter'),
-                  ),
-                  DropdownMenuItem(
-                    value: SeasonType.year,
-                    child: Text('Year'),
-                  ),
-                ],
-                onChanged: (value) {
-                  if (value == null) return;
-                  _changeSeasonType(value);
-                },
+        const SizedBox(height: AppSpacing.md),
+        _buildSeasonFilters(),
+        const SizedBox(height: AppSpacing.lg),
+        config == null
+            ? leaderboard
+            : ResponsiveSplit(
+                breakpoint: 920,
+                startFlex: 2,
+                endFlex: 1,
+                start: leaderboard,
+                end: settings,
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: _seasonId,
-                decoration: const InputDecoration(
-                  labelText: 'Season',
-                  border: OutlineInputBorder(),
-                ),
-                items: _seasonOptions
-                    .map(
-                      (season) => DropdownMenuItem(
-                        value: season.id,
-                        child: Text(season.id),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  setState(() => _seasonId = value);
-                  _refreshLeaderboard();
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _LeaderboardSection(
-          future: _leaderboardFuture,
-          playerMap: _playerMap,
-          onRetry: _refreshLeaderboard,
-        ),
-        const SizedBox(height: 16),
-        if (config != null) _buildSettingsCard(config),
-        const SizedBox(height: 12),
-        TextButton(
-          onPressed: _load,
-          child: const Text('Refresh'),
+        const SizedBox(height: AppSpacing.md),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: _load,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Refresh'),
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSeasonFilters() {
+    final seasonTypeField = DropdownButtonFormField<SeasonType>(
+      value: _seasonType,
+      decoration: const InputDecoration(
+        labelText: 'Season type',
+        border: OutlineInputBorder(),
+      ),
+      items: const [
+        DropdownMenuItem(
+          value: SeasonType.month,
+          child: Text('Month'),
+        ),
+        DropdownMenuItem(
+          value: SeasonType.quarter,
+          child: Text('Quarter'),
+        ),
+        DropdownMenuItem(
+          value: SeasonType.year,
+          child: Text('Year'),
+        ),
+      ],
+      onChanged: (value) {
+        if (value == null) return;
+        _changeSeasonType(value);
+      },
+    );
+    final seasonField = DropdownButtonFormField<String>(
+      value: _seasonId,
+      decoration: const InputDecoration(
+        labelText: 'Season',
+        border: OutlineInputBorder(),
+      ),
+      items: _seasonOptions
+          .map(
+            (season) => DropdownMenuItem(
+              value: season.id,
+              child: Text(season.id),
+            ),
+          )
+          .toList(),
+      onChanged: (value) {
+        setState(() => _seasonId = value);
+        _refreshLeaderboard();
+      },
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 620) {
+          return Column(
+            children: [
+              seasonTypeField,
+              const SizedBox(height: AppSpacing.md),
+              seasonField,
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: seasonTypeField),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(child: seasonField),
+          ],
+        );
+      },
     );
   }
 
@@ -272,7 +306,8 @@ class _SeasonsScreenState extends State<SeasonsScreen> {
             ),
             if (config.resetPolicy == SeasonResetPolicy.softReset) ...[
               const SizedBox(height: 12),
-              Text('Soft reset alpha: ${config.softResetAlpha.toStringAsFixed(2)}'),
+              Text(
+                  'Soft reset alpha: ${config.softResetAlpha.toStringAsFixed(2)}'),
               Slider(
                 value: config.softResetAlpha.clamp(0.0, 1.0),
                 onChanged: _updateSoftAlpha,

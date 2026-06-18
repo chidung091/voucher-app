@@ -7,6 +7,7 @@ import '../../domain/elo_config.dart';
 import '../../domain/player.dart';
 import '../../domain/player_rating.dart';
 import '../../services/player_service.dart';
+import '../../widgets/responsive_page.dart';
 import '../components/components.dart';
 
 class EloResetScreen extends StatefulWidget {
@@ -167,8 +168,8 @@ class _EloResetScreenState extends State<EloResetScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _players.isEmpty
               ? const Center(child: Text('No players found.'))
-              : ListView(
-                  padding: const EdgeInsets.all(16),
+              : ResponsivePage(
+                  maxWidth: 1080,
                   children: [
                     Card(
                       color: theme.colorScheme.errorContainer,
@@ -199,13 +200,21 @@ class _EloResetScreenState extends State<EloResetScreen> {
                       style: theme.textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
-                    ..._players.map((player) => _PlayerEloRow(
-                          player: player,
-                          currentElo:
-                              _ratings[player.id]?.elo ?? EloConfig.defaultElo,
-                          controller: _controllers[player.id]!,
-                          onResetToCurrent: () => _resetToCurrentElo(player.id),
-                        )),
+                    ResponsiveGrid(
+                      minItemWidth: 360,
+                      maxColumns: 2,
+                      children: [
+                        for (final player in _players)
+                          _PlayerEloRow(
+                            player: player,
+                            currentElo: _ratings[player.id]?.elo ??
+                                EloConfig.defaultElo,
+                            controller: _controllers[player.id]!,
+                            onResetToCurrent: () =>
+                                _resetToCurrentElo(player.id),
+                          ),
+                      ],
+                    ),
                     const SizedBox(height: 24),
                     DangerButton(
                       label: 'Reset All Ratings',
@@ -234,7 +243,6 @@ class _PlayerEloRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(

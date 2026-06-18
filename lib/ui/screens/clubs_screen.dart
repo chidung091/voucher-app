@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../core/app_theme.dart';
 import '../../domain/club.dart';
 import '../../services/club_service.dart';
+import '../../widgets/responsive_page.dart';
 import '../components/components.dart';
 
 class ClubsScreen extends StatefulWidget {
@@ -102,8 +104,8 @@ class _ClubsScreenState extends State<ClubsScreen> {
             if (diff != 0) return diff;
             return a.name.compareTo(b.name);
           });
-        return ListView(
-          padding: const EdgeInsets.all(16),
+        return ResponsivePage(
+          maxWidth: 1040,
           children: [
             Row(
               children: [
@@ -119,18 +121,22 @@ class _ClubsScreenState extends State<ClubsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             if (sorted.isEmpty)
               const EmptyState(
                 title: 'No clubs yet',
                 icon: Icons.shield_outlined,
               )
             else
-              ..._buildClubList(sorted, service),
-            const SizedBox(height: 8),
-            SecondaryButton(
-              onPressed: () => _load(service),
-              label: 'Refresh',
+              ..._buildClubSections(sorted, service),
+            const SizedBox(height: AppSpacing.md),
+            Align(
+              alignment: Alignment.centerRight,
+              child: SecondaryButton(
+                onPressed: () => _load(service),
+                label: 'Refresh',
+                icon: Icons.refresh,
+              ),
             ),
           ],
         );
@@ -138,48 +144,70 @@ class _ClubsScreenState extends State<ClubsScreen> {
     );
   }
 
-  List<Widget> _buildClubList(List<Club> clubs, ClubService service) {
-    final widgets = <Widget>[];
+  List<Widget> _buildClubSections(List<Club> clubs, ClubService service) {
+    final sections = <Widget>[];
     double? currentStars;
-    for (final club in clubs) {
-      if (currentStars != club.stars) {
-        currentStars = club.stars;
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 8),
-            child: Text(
-              _formatStars(club.stars),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
-        );
-      }
-      widgets.add(
+    final currentGroup = <Club>[];
+
+    void flushGroup() {
+      final stars = currentStars;
+      if (stars == null || currentGroup.isEmpty) return;
+      final groupedClubs = [...currentGroup];
+      sections.add(
         Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: AppCard(
-            child: CustomListTile(
-              title: club.name,
-              subtitle: _formatStars(club.stars),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CustomIconButton(
-                    onPressed: () => _edit(service, club),
-                    icon: Icons.edit_outlined,
-                  ),
-                  CustomIconButton(
-                    onPressed: () => _delete(service, club),
-                    icon: Icons.delete_outline,
-                  ),
-                ],
-              ),
-            ),
+          padding: const EdgeInsets.only(
+            top: AppSpacing.md,
+            bottom: AppSpacing.sm,
+          ),
+          child: Text(
+            _formatStars(stars),
+            style: Theme.of(context).textTheme.titleMedium,
           ),
         ),
       );
+      sections.add(
+        ResponsiveGrid(
+          minItemWidth: 300,
+          maxColumns: 3,
+          children: [
+            for (final club in groupedClubs) _buildClubCard(club, service),
+          ],
+        ),
+      );
+      currentGroup.clear();
     }
-    return widgets;
+
+    for (final club in clubs) {
+      if (currentStars != club.stars) {
+        flushGroup();
+        currentStars = club.stars;
+      }
+      currentGroup.add(club);
+    }
+    flushGroup();
+    return sections;
+  }
+
+  Widget _buildClubCard(Club club, ClubService service) {
+    return AppCard(
+      child: CustomListTile(
+        title: club.name,
+        subtitle: _formatStars(club.stars),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CustomIconButton(
+              onPressed: () => _edit(service, club),
+              icon: Icons.edit_outlined,
+            ),
+            CustomIconButton(
+              onPressed: () => _delete(service, club),
+              icon: Icons.delete_outline,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   static const List<double> _starOptions = [

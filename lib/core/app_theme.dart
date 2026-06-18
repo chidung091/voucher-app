@@ -183,6 +183,23 @@ class AppTheme {
           const IconThemeData(color: AppColors.deepTeal),
         ),
       ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: AppColors.neutral,
+        indicatorColor: AppColors.mint,
+        selectedIconTheme: const IconThemeData(color: AppColors.deepTeal),
+        unselectedIconTheme:
+            IconThemeData(color: AppColors.deepTeal.withOpacity(0.62)),
+        selectedLabelTextStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppColors.deepTeal,
+        ),
+        unselectedLabelTextStyle: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: AppColors.deepTeal.withOpacity(0.62),
+        ),
+      ),
       dividerTheme: const DividerThemeData(
         thickness: 1,
       ),

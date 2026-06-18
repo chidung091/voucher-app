@@ -8,6 +8,7 @@ import '../../domain/tournament_match.dart';
 import '../../domain/tournament_team.dart';
 import '../../services/player_service.dart';
 import '../../services/tournament_service.dart';
+import '../../widgets/responsive_page.dart';
 import '../components/components.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -148,39 +149,72 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+    return ResponsivePage(
+      maxWidth: 1120,
       children: [
-        Text(
-          'Home',
-          style: Theme.of(context).textTheme.headlineMedium,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final introColumn = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Home',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Add players and record tournament results without leaving this page.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                _buildQuickPlayerCard(context),
+              ],
+            );
+            final resultsColumn = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Active tournament results',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    if (!_loadingTournaments)
+                      IconButton(
+                        tooltip: 'Refresh tournaments',
+                        onPressed: _loadTournaments,
+                        icon: const Icon(Icons.refresh),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _buildTournamentResults(context),
+              ],
+            );
+
+            if (constraints.maxWidth >= 900) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(width: 360, child: introColumn),
+                  const SizedBox(width: AppSpacing.xl),
+                  Expanded(child: resultsColumn),
+                ],
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                introColumn,
+                const SizedBox(height: AppSpacing.xl),
+                resultsColumn,
+              ],
+            );
+          },
         ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          'Add players and record tournament results without leaving this page.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: AppSpacing.xl),
-        _buildQuickPlayerCard(context),
-        const SizedBox(height: AppSpacing.xl),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Active tournament results',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            if (!_loadingTournaments)
-              IconButton(
-                tooltip: 'Refresh tournaments',
-                onPressed: _loadTournaments,
-                icon: const Icon(Icons.refresh),
-              ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _buildTournamentResults(context),
       ],
     );
   }

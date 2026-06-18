@@ -10,6 +10,7 @@ import '../../services/player_service.dart';
 import '../../services/player_stats_service.dart';
 import '../../services/season_service.dart';
 import '../../widgets/error_view.dart';
+import '../../widgets/responsive_page.dart';
 
 class PlayerProfileScreen extends StatefulWidget {
   const PlayerProfileScreen({super.key, required this.playerId});
@@ -90,132 +91,135 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
         final showWarning = stats.totalMatches > 0 &&
             stats.eloHistory.length - 1 < stats.totalMatches;
 
-        return ListView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+        final statCards = [
+          _SectionCard(
+            title: 'Overall results',
+            child: Column(
+              children: [
+                _StatRow(
+                  items: [
+                    _StatItem(label: 'Wins', value: '${stats.wins}'),
+                    _StatItem(label: 'Draws', value: '${stats.draws}'),
+                    _StatItem(label: 'Losses', value: '${stats.losses}'),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _StatRow(
+                  items: [
+                    _StatItem(
+                      label: 'Matches',
+                      value: '${stats.totalMatches}',
+                    ),
+                    _StatItem(
+                      label: 'Win rate',
+                      value: '${stats.winRatePercent.toStringAsFixed(1)}%',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          _SectionCard(
+            title: 'Goals',
+            child: _StatRow(
+              items: [
+                _StatItem(label: 'GF', value: '${stats.goalsFor}'),
+                _StatItem(label: 'GA', value: '${stats.goalsAgainst}'),
+                _StatItem(label: 'GD', value: '${stats.goalDifference}'),
+              ],
+            ),
+          ),
+          _SectionCard(
+            title: 'Streaks',
+            child: Column(
+              children: [
+                _StatRow(
+                  items: [
+                    _StatItem(
+                      label: 'Current wins',
+                      value: '${stats.currentWinStreak}',
+                    ),
+                    _StatItem(
+                      label: 'Best wins',
+                      value: '${stats.bestWinStreak}',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _StatRow(
+                  items: [
+                    _StatItem(
+                      label: 'Current losses',
+                      value: '${stats.currentLoseStreak}',
+                    ),
+                    _StatItem(
+                      label: 'Worst losses',
+                      value: '${stats.worstLoseStreak}',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          _SectionCard(
+            title: 'Elo extremes',
+            child: _StatRow(
+              items: [
+                _StatItem(label: 'Peak', value: '${stats.peakElo}'),
+                _StatItem(label: 'Lowest', value: '${stats.lowestElo}'),
+              ],
+            ),
+          ),
+          if (view.season != null)
+            _SectionCard(
+              title: 'This season (${view.season!.id})',
+              child: view.seasonRow == null
+                  ? const Text('No season data yet.')
+                  : Column(
+                      children: [
+                        _StatRow(
+                          items: [
+                            _StatItem(
+                              label: 'Season Elo',
+                              value: '${view.seasonRow!.seasonElo}',
+                            ),
+                            _StatItem(
+                              label: 'Delta',
+                              value: _formatDelta(
+                                view.seasonRow!.deltaFromStart,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _StatRow(
+                          items: [
+                            _StatItem(
+                              label: 'Matches',
+                              value: '${view.seasonRow!.matchesPlayed}',
+                            ),
+                            _StatItem(
+                              label: 'W-D-L',
+                              value:
+                                  '${view.seasonRow!.wins}-${view.seasonRow!.draws}-${view.seasonRow!.losses}',
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+            ),
+        ];
+
+        return ResponsivePage(
+          maxWidth: 1180,
           children: [
             _HeaderCard(player: view.player, stats: stats),
             const SizedBox(height: 16),
-            _SectionCard(
-              title: 'Overall results',
-              child: Column(
-                children: [
-                  _StatRow(
-                    items: [
-                      _StatItem(label: 'Wins', value: '${stats.wins}'),
-                      _StatItem(label: 'Draws', value: '${stats.draws}'),
-                      _StatItem(label: 'Losses', value: '${stats.losses}'),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _StatRow(
-                    items: [
-                      _StatItem(
-                        label: 'Matches',
-                        value: '${stats.totalMatches}',
-                      ),
-                      _StatItem(
-                        label: 'Win rate',
-                        value: '${stats.winRatePercent.toStringAsFixed(1)}%',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            ResponsiveGrid(
+              minItemWidth: 340,
+              maxColumns: 2,
+              children: statCards,
             ),
-            const SizedBox(height: 16),
-            _SectionCard(
-              title: 'Goals',
-              child: _StatRow(
-                items: [
-                  _StatItem(label: 'GF', value: '${stats.goalsFor}'),
-                  _StatItem(label: 'GA', value: '${stats.goalsAgainst}'),
-                  _StatItem(label: 'GD', value: '${stats.goalDifference}'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _SectionCard(
-              title: 'Streaks',
-              child: Column(
-                children: [
-                  _StatRow(
-                    items: [
-                      _StatItem(
-                        label: 'Current wins',
-                        value: '${stats.currentWinStreak}',
-                      ),
-                      _StatItem(
-                        label: 'Best wins',
-                        value: '${stats.bestWinStreak}',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _StatRow(
-                    items: [
-                      _StatItem(
-                        label: 'Current losses',
-                        value: '${stats.currentLoseStreak}',
-                      ),
-                      _StatItem(
-                        label: 'Worst losses',
-                        value: '${stats.worstLoseStreak}',
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _SectionCard(
-              title: 'Elo extremes',
-              child: _StatRow(
-                items: [
-                  _StatItem(label: 'Peak', value: '${stats.peakElo}'),
-                  _StatItem(label: 'Lowest', value: '${stats.lowestElo}'),
-                ],
-              ),
-            ),
-            if (view.season != null) ...[
-              const SizedBox(height: 16),
-              _SectionCard(
-                title: 'This season (${view.season!.id})',
-                child: view.seasonRow == null
-                    ? const Text('No season data yet.')
-                    : Column(
-                        children: [
-                          _StatRow(
-                            items: [
-                              _StatItem(
-                                label: 'Season Elo',
-                                value: '${view.seasonRow!.seasonElo}',
-                              ),
-                              _StatItem(
-                                label: 'Delta',
-                                value: _formatDelta(
-                                  view.seasonRow!.deltaFromStart,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          _StatRow(
-                            items: [
-                              _StatItem(
-                                label: 'Matches',
-                                value: '${view.seasonRow!.matchesPlayed}',
-                              ),
-                              _StatItem(
-                                label: 'W-D-L',
-                                value:
-                                    '${view.seasonRow!.wins}-${view.seasonRow!.draws}-${view.seasonRow!.losses}',
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-              ),
-            ],
             const SizedBox(height: 16),
             _SectionCard(
               title: 'Elo history',
@@ -257,9 +261,13 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            TextButton(
-              onPressed: () => setState(() => _future = _load()),
-              child: const Text('Refresh'),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => setState(() => _future = _load()),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Refresh'),
+              ),
             ),
           ],
         );

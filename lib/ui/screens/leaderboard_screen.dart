@@ -6,6 +6,7 @@ import '../../domain/player.dart';
 import '../../domain/player_rating.dart';
 import '../../services/match_service.dart';
 import '../../services/player_service.dart';
+import '../../widgets/responsive_page.dart';
 import '../components/components.dart';
 
 class LeaderboardScreen extends StatefulWidget {
@@ -72,9 +73,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: _ratings.isEmpty
-          ? ListView(
-              children: const [
-                SizedBox(height: 100),
+          ? const ResponsivePage(
+              maxWidth: 720,
+              children: [
                 EmptyState(
                   icon: Icons.emoji_events_outlined,
                   title: 'No matches yet',
@@ -82,95 +83,106 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 ),
               ],
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              itemCount: _ratings.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return const SectionHeader(title: 'Rankings');
-                }
-
-                final rating = _ratings[index - 1];
-                final rank = index;
-                final playerName = _playerName(rating.playerId);
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: AppCard(
-                    onTap: () => context.go('/players/${rating.playerId}'),
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    child: Row(
-                      children: [
-                        // Rank Badge
-                        _RankBadge(rank: rank),
-                        const SizedBox(width: AppSpacing.md),
-
-                        // Player Info
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                playerName,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: AppSpacing.xs),
-                              // W/D/L Stats
-                              Row(
-                                children: [
-                                  _MiniStat(
-                                    label: 'W',
-                                    value: rating.wins,
-                                    color: colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: AppSpacing.md),
-                                  _MiniStat(
-                                    label: 'D',
-                                    value: rating.draws,
-                                    color: colorScheme.secondary,
-                                  ),
-                                  const SizedBox(width: AppSpacing.md),
-                                  _MiniStat(
-                                    label: 'L',
-                                    value: rating.losses,
-                                    color: colorScheme.error,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // ELO Display
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${rating.elo}',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.primary,
-                              ),
-                            ),
-                            Text(
-                              'ELO',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Icon(
-                          Icons.chevron_right,
-                          color: theme.textTheme.bodySmall?.color
-                              ?.withOpacity(0.38),
-                        ),
-                      ],
+          : ResponsivePage(
+              maxWidth: 900,
+              children: [
+                const SectionHeader(title: 'Rankings'),
+                for (var index = 0; index < _ratings.length; index++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: _LeaderboardRow(
+                      rating: _ratings[index],
+                      rank: index + 1,
+                      playerName: _playerName(_ratings[index].playerId),
+                      colorScheme: colorScheme,
+                      trailingColor:
+                          theme.textTheme.bodySmall?.color?.withOpacity(0.38),
                     ),
                   ),
-                );
-              },
+              ],
             ),
+    );
+  }
+}
+
+class _LeaderboardRow extends StatelessWidget {
+  const _LeaderboardRow({
+    required this.rating,
+    required this.rank,
+    required this.playerName,
+    required this.colorScheme,
+    required this.trailingColor,
+  });
+
+  final PlayerRating rating;
+  final int rank;
+  final String playerName;
+  final ColorScheme colorScheme;
+  final Color? trailingColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      onTap: () => context.go('/players/${rating.playerId}'),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        children: [
+          _RankBadge(rank: rank),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  playerName,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Row(
+                  children: [
+                    _MiniStat(
+                      label: 'W',
+                      value: rating.wins,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    _MiniStat(
+                      label: 'D',
+                      value: rating.draws,
+                      color: colorScheme.secondary,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    _MiniStat(
+                      label: 'L',
+                      value: rating.losses,
+                      color: colorScheme.error,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${rating.elo}',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.primary,
+                ),
+              ),
+              Text(
+                'ELO',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Icon(Icons.chevron_right, color: trailingColor),
+        ],
+      ),
     );
   }
 }

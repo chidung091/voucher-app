@@ -83,6 +83,7 @@ class AdaptiveScaffold extends StatelessWidget {
     ];
 
     final isTablet = ResponsiveBreakpoints.isTablet(context);
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final activeItems = isTablet ? allItems : mobileItems;
 
     final location = GoRouterState.of(context).uri.path;
@@ -106,6 +107,9 @@ class AdaptiveScaffold extends StatelessWidget {
 
     final rail = NavigationRail(
       selectedIndex: selectedIndex,
+      extended: isDesktop,
+      labelType: isDesktop ? null : NavigationRailLabelType.all,
+      minExtendedWidth: 192,
       onDestinationSelected: (index) => context.go(activeItems[index].route),
       destinations: [
         for (final item in activeItems)
